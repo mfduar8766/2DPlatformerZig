@@ -97,31 +97,25 @@ pub const Game = struct {
         };
         while (!rayLib.windowShouldClose()) {
             const dt = rayLib.getFrameTime();
+            self.player.handleMovement(dt);
             camera.target = self.player.rect.position;
+
             rayLib.beginDrawing();
             defer rayLib.endDrawing();
-
             rayLib.clearBackground(rayLib.Color.sky_blue);
 
             self.gameUI.draw();
-            self.player.handleMovement(dt);
 
             camera.begin();
-            for (self.levelsList, 0..) |Level, levelIndex| {
-                switch (levelIndex) {
-                    0 => {
-                        if (Level.dynamicPlatForms.items.len > 0) {
-                            //
-                        }
-                        self.renderStaticLevelPlatforms(levelIndex);
-                    },
-                    1 => {
-                        self.renderStaticLevelPlatforms(levelIndex);
-                    },
-                    2 => {
-                        self.renderStaticLevelPlatforms(levelIndex);
-                    },
-                    else => {},
+            for (0..self.levelsList.len) |idx| {
+                self.renderStaticLevelPlatforms(idx);
+
+                // Don't forget to draw and check collisions for dynamic platforms too!
+                if (self.levelsList[idx].dynamicPlatForms.items.len > 0) {
+                    for (self.levelsList[idx].dynamicPlatForms.items) |*dp| {
+                        dp.draw();
+                        self.checkSingleCollision(dp); // Extract collision logic to a helper
+                    }
                 }
             }
             self.player.draw();
