@@ -105,14 +105,13 @@ pub const Game = struct {
 
             rayLib.beginDrawing();
             defer rayLib.endDrawing();
-            rayLib.clearBackground(rayLib.Color.sky_blue);
 
             if (self.isGameOver) {
                 rayLib.clearBackground(.black);
-                self.player.velocityX = 0.0;
-                self.player.playerState = .DEAD;
-                self.player.rect.position.x = 0.0;
-                self.player.rect.position.y = @as(f32, @floatFromInt(rayLib.getScreenHeight())) - 80.0;
+                self.resetGameState();
+            }
+            if (!self.isGameOver) {
+                rayLib.clearBackground(rayLib.Color.sky_blue);
             }
 
             self.widgets.draw();
@@ -134,7 +133,7 @@ pub const Game = struct {
         for (level.staticPlatforms) |platform| {
             platform.draw();
             //Check collision for this platform
-            self.checkForIntersection(platform);
+            self.checkForIntersection(dt, platform);
             std.debug.print("PPP playerX: {d} playerY: {d} playerH: {d} playerW: {d} playerGetH: {d} playerGetW: {d} playerStat: {any} platFormT: {any} platformX: {d} platformY: {d} platformH: {d} platformW: {d} platformGetH: {d} platformGetW: {d} damage: {d} dealDamage: {any}\n", .{
                 self.player.rect.position.x,
                 self.player.rect.position.y,
@@ -142,7 +141,7 @@ pub const Game = struct {
                 self.player.rect.width,
                 self.player.rect.getHeight(),
                 self.player.rect.getWidth(),
-                self.player.playerState,
+                self.player.getPlayerState(),
                 platform.rect.objectType,
                 platform.rect.position.x,
                 platform.rect.position.y,
@@ -153,68 +152,90 @@ pub const Game = struct {
                 platform.damageAmount,
                 platform.dealDamage,
             });
-            if (self.player.playerState == .INTERSECTED and platform.rect.position.y - self.player.rect.height == self.player.rect.position.y) {
-                if (self.player.rect.getWidth() < platform.rect.position.x or self.player.rect.position.x > platform.rect.getWidth()) {
-                    self.player.velocityY = self.player.fallingSpeed;
-                    self.player.velocityY += GRAVITY * dt;
-                    self.player.rect.position.y += self.player.velocityY * dt;
-                    self.player.playerState = .FALLING;
-                    self.checkForIntersection(platform);
-                }
-            }
-            if (self.player.playerState == .GROUNDED or self.player.playerState == .FALLING) {
-                if (self.player.rect.position.x > platform.rect.getWidth() and platform.platFormType == .GROUND) {
-                    // FELL FROM PLATFORM
-                    self.player.velocityY = self.player.fallingSpeed;
-                    self.player.velocityY += GRAVITY * dt;
-                    self.player.rect.position.y += self.player.velocityY * dt;
-                    self.player.playerState = .FALLING;
-                    self.checkForIntersection(platform);
-                }
-            }
-
-            if (platform.dealDamage) {
-                self.handleDamage(platform.damageOverTime, platform.damageAmount);
+            self.handleCollisions(dt, platform);
+            if (platform.dealDamage and self.player.getPlayerState() == .INTERSECTED) {
+                self.handleDamage(dt, platform.damageOverTime, platform.damageAmount);
             }
         }
     }
-    fn checkForIntersection(self: *Self, platform: Platform) void {
+    fn handleCollisions(self: *Self, dt: f32, platform: Platform) void {
+        // PLAYER ON TOP OF A PLATFORM
+        if (self.player.getPlayerState() == .INTERSECTED and platform.rect.position.y - self.player.rect.height == self.player.rect.position.y) {
+            std.debug.print("ON TOP OF PLATFORM platformHeight: {d} playerY: {d}\n", .{ platform.rect.position.y - self.player.rect.height, self.player.rect.position.y });
+            if (self.player.rect.getWidth() < platform.rect.position.x or self.player.rect.position.x > platform.rect.getWidth()) {
+                // PLAYER FALLS OFF PLATFORM
+                self.player.velocityY = self.player.fallingSpeed;
+                self.player.velocityY += GRAVITY * dt;
+                self.player.rect.position.y += self.player.velocityY * dt;
+                self.player.setPlayerState(.FALLING);
+                self.checkForIntersection(dt, platform);
+            }
+            // else if (self.player.rect.height >= platform.rect.getHeight()) {
+            //     std.debug.print("ON WATER {any}\n", .{platform.platFormType});
+            // }
+        }
+        // PLAYER IS ON GROUND LEVEL
+        if (self.player.getPlayerState() == .GROUNDED) {
+            if (self.player.rect.position.x > platform.rect.getWidth() and platform.platFormType == .GROUND) {
+                // FELL FROM PLATFORM
+                self.player.velocityY = self.player.fallingSpeed;
+                self.player.velocityY += GRAVITY * dt;
+                self.player.rect.position.y += self.player.velocityY * dt;
+                self.player.setPlayerState(.FALLING);
+                self.checkForIntersection(dt, platform);
+            }
+        }
+    }
+    fn checkForIntersection(self: *Self, dt: f32, platform: Platform) void {
         if (self.player.rect.intersects(platform.rect)) {
             // Only if falling down
-            if (self.player.velocityY > 0) {
+            //self.player.velocityY > 0
+            if (self.player.getPlayerState() == .FALLING) {
                 self.player.rect.position.y = platform.rect.position.y - self.player.rect.height;
                 self.player.velocityY = 0;
-                if (self.player.playerState == .FALLING) {
-                    self.player.playerState = .INTERSECTED;
+                if (self.player.getPlayerState() == .FALLING) {
+                    self.player.setPlayerState(.INTERSECTED);
                 }
-                if (self.player.playerState == .INTERSECTED and platform.dealDamage) {
-                    self.handleDamage(platform.damageOverTime, platform.damageAmount);
+                if (self.player.getPlayerState() == .INTERSECTED and platform.dealDamage) {
+                    self.player.setPlayerState(.GROUNDED);
+                    self.handleDamage(dt, platform.damageOverTime, platform.damageAmount);
                 }
                 if (platform.platFormType == .GROUND) {
-                    self.player.playerState = .GROUNDED;
+                    self.player.setPlayerState(.GROUNDED);
                 }
             }
         }
     }
-    fn handleDamage(self: *Self, damageOverTime: bool, damageAmount: f32) void {
-        self.currentTime = rayLib.getTime();
+    fn handleDamage(self: *Self, dt: f32, damageOverTime: bool, damageAmount: f32) void {
+        if (self.currentTime == 0.0) {
+            self.currentTime = rayLib.getTime();
+        }
         if (!damageOverTime) {
             self.player.setDamage(damageAmount);
             self.widgets.healthBarRect.width = self.player.getHealth();
+            self.player.applyDamageBound(dt);
         }
         const elapsedTime = rayLib.getTime() - self.currentTime;
-        std.debug.print("DAMAGE curr: {d} elapsed: {d}\n", .{ self.currentTime, elapsedTime });
         if (damageOverTime and elapsedTime > 1.0) {
             self.player.setDamage(damageAmount);
             self.widgets.healthBarRect.width = self.player.getHealth();
+            std.debug.print("DAMAGE playerState {any}\n", .{self.player.getPlayerState()});
+            // self.player.applyDamageBound(dt);
         }
-
-        if (self.player.health < 0) {
-            self.handleGameOver(33);
-        }
+        // if (self.player.health < 0) {
+        //     self.handleGameOver();
+        // }
     }
-    fn handleGameOver(self: *Self, _: f32) void {
-        // self.player.playerState = .DEAD;
+    fn resetGameState(self: *Self) void {
+        self.player.velocityX = 0.0;
+        self.player.setPlayerState(.ALIVE);
+        self.player.rect.position.x = 0.0;
+        self.isGameOver = false;
+        self.player.rect.position.y = @as(f32, @floatFromInt(rayLib.getScreenHeight())) - 80.0;
+        self.currentTime = 0.0;
+    }
+    fn handleGameOver(self: *Self) void {
+        self.player.setPlayerState(.DEAD);
         // self.player.velocityY = 200.0 * self.player.jumpMultiplier;
         // self.player.velocityY += GRAVITY * dt;
         // self.player.rect.position.y = self.player.velocityY;

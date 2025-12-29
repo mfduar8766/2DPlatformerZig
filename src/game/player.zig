@@ -20,7 +20,9 @@ pub const Player = struct {
     stamina: f32 = 100.0,
     velocityY: f32 = 0.0,
     playerState: PLAYER_STATE = .GROUNDED, // BEFORE THIS WAS A BOOL onGround SHOULD I KEEP A BOOL OR A ENUM? ENUM SEEMS TO BE MORE WORK
-    jumpStartTime: f64 = 0.0,
+    // jumpStartTime: f64 = 0.0,
+    damageBounce: f32 = -200.0,
+    canSwim: bool = false,
 
     pub fn init(allocator: std.mem.Allocator) !*Self {
         const playerPtr = try allocator.create(Self);
@@ -81,6 +83,19 @@ pub const Player = struct {
     }
     pub fn getHealth(self: Self) f32 {
         return self.health;
+    }
+    pub fn applyDamageBound(self: *Self, dt: f32) void {
+        self.velocityY = self.damageBounce;
+        self.velocityY += GRAVITY * dt;
+        self.rect.position.y += self.velocityY * dt;
+        self.rect.position.x -= self.velocityX * dt;
+        // self.playerState = .JUMPING;
+    }
+    pub fn setPlayerState(self: *Self, state: PLAYER_STATE) void {
+        self.playerState = state;
+    }
+    pub fn getPlayerState(self: Self) PLAYER_STATE {
+        return self.playerState;
     }
     fn checkBounds(self: *Self, move: MOVE) void {
         switch (move) {

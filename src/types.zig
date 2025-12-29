@@ -3,17 +3,20 @@ pub const SCREEN_WIDTH: i32 = 1500;
 pub const SCREEN_DIVISOR: i32 = 2;
 pub const GRAVITY: f32 = 100.0;
 
-pub const LogLevels = enum(u2) {
+pub const LogLevels = enum(u6) {
     INFO = 0,
     WARNING = 1,
     ERROR = 2,
     FATAL = 3,
-    pub fn get(key: u2) []const u8 {
+    DEBUG = 4,
+    pub fn get(key: u6) []const u8 {
         return switch (key) {
             0 => "INFO",
             1 => "WARNING",
             2 => "ERROR",
             3 => "FATAL",
+            4 => "DEBUG",
+            else => "UNKNOWN",
         };
     }
 };
@@ -95,4 +98,6 @@ pub const PLAYER_STATE = enum(u8) {
     DEAD = 4,
     ALIVE = 5,
     INTERSECTED = 6,
+    TAKING_DAMAGE = 7,
+    ON_TOP = 8,
 };

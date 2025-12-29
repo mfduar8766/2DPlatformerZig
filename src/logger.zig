@@ -104,6 +104,7 @@ const LoggerData = struct {
             Types.LogLevels.WARNING => self.level = Types.LogLevels.get(1),
             Types.LogLevels.ERROR => self.level = Types.LogLevels.get(2),
             Types.LogLevels.FATAL => self.level = Types.LogLevels.get(3),
+            Types.LogLevels.DEBUG => self.level = Types.LogLevels.get(4),
         }
         var buf: [29]u8 = undefined;
         const timeStamp = Utils.fromTimestamp(@intCast(time.timestamp()));
