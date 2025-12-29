@@ -10,6 +10,7 @@ pub const Platform = struct {
     rect: Rectangle,
     dealDamage: bool = false,
     damageAmount: f32 = 0,
+    damageOverTime: bool = false,
     pub fn init(
         // alloocator: std.mem.Allocator,
         platFormType: PLATFORM_TYPES,
@@ -18,6 +19,7 @@ pub const Platform = struct {
         position: rayLib.Vector2,
         color: rayLib.Color,
         dealDamage: bool,
+        damageOverTime: bool,
     ) Self {
         var platForm = Self{
             // .allocator = alloocator,
@@ -30,6 +32,7 @@ pub const Platform = struct {
             ),
             .platFormType = platFormType,
             .dealDamage = dealDamage,
+            .damageOverTime = damageOverTime,
         };
         platForm.setDamageAmount(platFormType);
         return platForm;
@@ -49,7 +52,7 @@ pub const Platform = struct {
                 self.damageAmount = 10.0;
             },
             PLATFORM_TYPES.WATER => {
-                self.damageAmount = 5.0;
+                self.damageAmount = 10.0;
             },
             else => {},
         }

@@ -40,4 +40,10 @@ pub const Rectangle = struct {
             self.color,
         );
     }
+    pub fn getHeight(self: Self) f32 {
+        return self.position.y + self.height;
+    }
+    pub fn getWidth(self: Self) f32 {
+        return self.position.x + self.width;
+    }
 };

@@ -1,6 +1,58 @@
 pub const SCREEN_HEIGHT: i32 = 2500;
 pub const SCREEN_WIDTH: i32 = 1500;
 pub const SCREEN_DIVISOR: i32 = 2;
+pub const GRAVITY: f32 = 100.0;
+
+pub const LogLevels = enum(u2) {
+    INFO = 0,
+    WARNING = 1,
+    ERROR = 2,
+    FATAL = 3,
+    pub fn get(key: u2) []const u8 {
+        return switch (key) {
+            0 => "INFO",
+            1 => "WARNING",
+            2 => "ERROR",
+            3 => "FATAL",
+        };
+    }
+};
+
+pub const PlatForms = enum(u4) {
+    LINUX,
+    MAC_ARM_64,
+    MAC_X64,
+    WIN_32,
+    WIN_64,
+    pub fn getOS(key: u4) []const u8 {
+        return switch (key) {
+            0 => "linux64",
+            1 => "mac-arm64",
+            2 => "mac-x64",
+            3 => "win32",
+            4 => "win64",
+            else => "UNKNOWN",
+        };
+    }
+};
+
+pub const FileExtensions = enum(u8) {
+    TXT,
+    PNG,
+    JPG,
+    LOG,
+    SH,
+    pub fn get(key: u8) []const u8 {
+        return switch (key) {
+            0 => "txt",
+            1 => "png",
+            2 => "jpg",
+            3 => "log",
+            4 => "sh",
+            else => "",
+        };
+    }
+};
 
 pub const MOVE = enum(u2) {
     LEFT = 0,
@@ -33,4 +85,14 @@ pub const GAME_OBJECT_TYPES = union(enum) {
     PLATFORM: PLATFORM_TYPES, // Platform can hold values from PLATFORM_TYPES
     ENEMY: ENEMY_TYPES, // Enemy can hold values from ENEMY_TYPE
     UI: UI_TYPES,
+};
+
+pub const PLAYER_STATE = enum(u8) {
+    GROUNDED = 0,
+    JUMPING = 1,
+    FALLING = 2,
+    FRENZY = 3,
+    DEAD = 4,
+    ALIVE = 5,
+    INTERSECTED = 6,
 };

@@ -3,6 +3,8 @@ const rayLib = @import("raylib");
 const Rectangle = @import("../common/shapes.zig").Rectangle;
 const GAME_OBJECT_TYPES = @import("../types.zig").GAME_OBJECT_TYPES;
 const MOVE = @import("../types.zig").MOVE;
+const GRAVITY = @import("../types.zig").GRAVITY;
+const PLAYER_STATE = @import("../types.zig").PLAYER_STATE;
 
 pub const Player = struct {
     const Self = @This();
@@ -12,11 +14,12 @@ pub const Player = struct {
     jumpHeight: f32 = -200.0,
     speedMultiplier: f32 = 2.0,
     jumpMultiplier: f32 = 2.0,
+    fallingSpeed: f32 = 200.0,
+    fallingMultiplier: f32 = 2.0,
     health: f32 = 100.0,
     stamina: f32 = 100.0,
-    gravity: f32 = 100.0,
     velocityY: f32 = 0.0,
-    onGround: bool = true,
+    playerState: PLAYER_STATE = .GROUNDED, // BEFORE THIS WAS A BOOL onGround SHOULD I KEEP A BOOL OR A ENUM? ENUM SEEMS TO BE MORE WORK
     jumpStartTime: f64 = 0.0,
 
     pub fn init(allocator: std.mem.Allocator) !*Self {
@@ -46,18 +49,18 @@ pub const Player = struct {
             self.checkBounds(MOVE.LEFT);
         }
         // Jumping
-        if (rayLib.isKeyPressed(rayLib.KeyboardKey.w) and self.onGround) {
-            self.velocityY = self.jumpHeight * self.jumpMultiplier;
-            self.onGround = false;
+        if (rayLib.isKeyPressed(rayLib.KeyboardKey.w) and self.playerState == .GROUNDED) {
+            self.velocityY = self.jumpHeight; //* self.jumpMultiplier;
+            self.playerState = .JUMPING;
             // self.jumpStartTime = rayLib.getTime();
         }
-        // 3. Gravity & Vertical Position (The "Gradual" part)
-        if (!self.onGround) {
+        if (self.playerState == .JUMPING or self.playerState == .FALLING) {
             // Pull the velocity down gradually
             // Gravity should be high (e.g., 980 or 1200) to feel snappy
-            self.velocityY += self.gravity * dt;
+            self.velocityY += GRAVITY * dt;
             // Move the player based on the current velocity
             self.rect.position.y += self.velocityY * dt;
+            self.playerState = .FALLING;
         }
 
         // if (!self.onGround) {
@@ -66,12 +69,18 @@ pub const Player = struct {
         // }
         // const currentTime = rayLib.getTime();
         // if (currentTime - self.jumpStartTime >= 1.0 and !self.onGround) {
-        //     self.velocityY += self.gravity * dt; // Apply gravity every frame
+        //     self.velocityY += GRAVITY * dt; // Apply gravity every frame
         //     self.rect.position.y += self.velocityY * dt; // Update position based on velocityY
         // }
     }
-    pub fn draw(self: *Self) void {
+    pub fn draw(self: Self) void {
         self.rect.draw();
+    }
+    pub fn setDamage(self: *Self, damageAmount: f32) void {
+        self.health = self.health - damageAmount;
+    }
+    pub fn getHealth(self: Self) f32 {
+        return self.health;
     }
     fn checkBounds(self: *Self, move: MOVE) void {
         switch (move) {
