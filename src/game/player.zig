@@ -108,6 +108,12 @@ pub const Player = struct {
         }
         self.velocityY = value;
     }
+    pub fn getVelocity(self: Self, velocity: VELOCITY) f32 {
+        if (velocity == .X) {
+            return self.velocityX;
+        }
+        return self.velocityY;
+    }
     pub fn applyDamageBounce(self: *Self, dt: f32) void {
         self.velocityY = self.damageBounce;
         self.velocityY += GRAVITY * dt;

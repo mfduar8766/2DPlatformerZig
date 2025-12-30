@@ -160,8 +160,8 @@ pub const Game = struct {
                 platform.damageAmount,
                 platform.dealDamage,
             });
-            if (self.player.velocityY > 0) {
-                self.player.velocityY = 0;
+            if (self.player.getVelocity(VELOCITY.Y) > 0) {
+                self.player.setVelocity(VELOCITY.Y, 0.0);
                 self.player.rect.position.y = platform.rect.position.y - self.player.rect.height;
                 self.player.setIsOnGround(true);
                 self.player.setIsFalling(false);
