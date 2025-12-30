@@ -32,8 +32,8 @@ pub const Levels = struct {
     }
 };
 
-pub fn createLevel0(allocator: std.mem.Allocator, staticPlatforms: comptime_int) ![]Platform {
-    var list = try allocator.alloc(Platform, @as(usize, staticPlatforms));
+pub fn createLevel0(allocator: std.mem.Allocator, comptime staticPlatforms: usize) ![]Platform {
+    var list = try allocator.alloc(Platform, staticPlatforms);
     const ground = Platform.init(
         // allocator,
         PLATFORM_TYPES.GROUND,
@@ -48,6 +48,16 @@ pub fn createLevel0(allocator: std.mem.Allocator, staticPlatforms: comptime_int)
         false,
         false,
     );
+    // const ground2 = Platform.init(
+    //     // allocator,
+    //     PLATFORM_TYPES.GROUND,
+    //     300.0,
+    //     100.0,
+    //     rayLib.Vector2.init(301.0, @as(f32, @floatFromInt(rayLib.getScreenHeight())) - 30.0),
+    //     .green,
+    //     false,
+    //     false,
+    // );
     const water = Platform.init(
         // allocator,
         PLATFORM_TYPES.WATER,
@@ -89,6 +99,7 @@ pub fn createLevel0(allocator: std.mem.Allocator, staticPlatforms: comptime_int)
     // );
 
     list[0] = ground;
+    // list[1] = ground2;
     list[1] = water;
     list[2] = verticalPlatform;
     // list[3] = verticalPlatform;

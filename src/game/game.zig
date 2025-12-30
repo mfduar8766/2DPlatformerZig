@@ -10,7 +10,6 @@ const Levels = @import("./levels.zig").Levels;
 const createLevel0 = @import("./levels.zig").createLevel0;
 const GRAVITY = @import("../types.zig").GRAVITY;
 const PLAYER_STATE = @import("../types.zig").PLAYER_STATE;
-const VELOCITY = @import("../types.zig").VELOCITY;
 
 const Config = struct {
     const Self = @This();
@@ -76,7 +75,7 @@ pub const Game = struct {
             .widgets = Widgets.init(),
         };
         inline for (0..totalLevels) |i| {
-            const platforms = try createLevel0(allocator, 3);
+            const platforms = try createLevel0(allocator, 4);
             gamePtr.levelsList[i] = try Levels.init(allocator, platforms);
         }
         return gamePtr;
@@ -118,12 +117,9 @@ pub const Game = struct {
 
             self.widgets.draw();
 
-            // camera.begin();
             rayLib.beginMode2D(camera);
-
             self.drawWorld(dt);
             self.player.draw();
-            // camera.end();
             rayLib.endMode2D();
         }
     }
@@ -135,15 +131,15 @@ pub const Game = struct {
         for (level.staticPlatforms) |platform| {
             platform.draw();
             self.checkForIntersection(dt, platform);
-            self.checkForIntersection(dt, platform);
         }
     }
     fn checkForIntersection(self: *Self, dt: f32, platform: Platform) void {
         if (self.player.rect.intersects(platform.rect)) {
-            std.debug.print("INTERSECTED playerX: {d} playerY: {d} playerVelY: {d} isFalling: {any} playerH: {d} playerW: {d} playerGetH: {d} playerGetW: {d} playerStat: {any} platFormT: {any} platformX: {d} platformY: {d} platformH: {d} platformW: {d} platformGetH: {d} platformGetW: {d} damage: {d} dealDamage: {any}\n", .{
+            std.debug.print("INTERSECTED playerX: {d} playerY: {d} playerVelY: {d} playerVelX: {d} isFalling: {any} playerH: {d} playerW: {d} playerGetH: {d} playerGetW: {d} playerStat: {any} platFormT: {any} platformX: {d} platformY: {d} platformH: {d} platformW: {d} platformGetH: {d} platformGetW: {d} damage: {d} dealDamage: {any}\n", .{
                 self.player.rect.position.x,
                 self.player.rect.position.y,
-                self.player.velocityY,
+                self.player.getVelocity(.Y),
+                self.player.getVelocity(.X),
                 self.player.getIsFalling(),
                 self.player.rect.height,
                 self.player.rect.width,
@@ -160,8 +156,19 @@ pub const Game = struct {
                 platform.damageAmount,
                 platform.dealDamage,
             });
-            if (self.player.getVelocity(VELOCITY.Y) > 0) {
-                self.player.setVelocity(VELOCITY.Y, 0.0);
+            // PLAYER JUMPS AND COLLIDES WITH SIDE OF PLATFORM IN MID AIR
+            if (self.player.getVelocity(.X) > 0 and !self.player.getIsOnGround()) {
+                if (self.player.rect.position.x >= platform.rect.position.x or self.player.rect.position.x <= platform.rect.getWidth()) {
+                    std.debug.print("PLAYER JUMPS AND MOVES RIGHT AND TOUCHES PLATFORM\n", .{});
+                    self.player.setVelocity(.X, 0.0);
+                    self.player.setVelocity(.Y, 0.0);
+                    self.player.rect.position.x -= self.player.rect.position.x / 2;
+                    self.player.startFalling(dt);
+                }
+            }
+            if (self.player.getVelocity(.Y) > 0) {
+                self.player.setVelocity(.Y, 0.0);
+                self.player.setVelocity(.X, 0.0);
                 self.player.rect.position.y = platform.rect.position.y - self.player.rect.height;
                 self.player.setIsOnGround(true);
                 self.player.setIsFalling(false);
@@ -169,7 +176,8 @@ pub const Game = struct {
                 if (self.player.rect.position.y >= platform.rect.position.y) {
                     std.debug.print("HIT BOTTOM OF PLATFORM\n", .{});
                     self.currentTime = 0.0;
-                    self.player.setVelocity(VELOCITY.Y, 0.0);
+                    self.player.setVelocity(.Y, 0.0);
+                    self.player.setVelocity(.X, 0.0);
                     self.player.rect.position.y = platform.rect.position.y + platform.rect.height;
                     self.player.startFalling(dt);
                 }

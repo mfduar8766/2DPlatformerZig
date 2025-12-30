@@ -10,7 +10,6 @@ const VELOCITY = @import("../types.zig").VELOCITY;
 pub const Player = struct {
     const Self = @This();
     allocator: std.mem.Allocator,
-    velocityX: f32 = 100.0,
     rect: Rectangle,
     jumpHeight: f32 = -200.0,
     speedMultiplier: f32 = 2.0,
@@ -19,10 +18,12 @@ pub const Player = struct {
     fallingMultiplier: f32 = 2.0,
     health: f32 = 100.0,
     stamina: f32 = 100.0,
+    velocityX: f32 = 0.0,
     velocityY: f32 = 0.0,
     playerState: PLAYER_STATE = .ALIVE, // BEFORE THIS WAS A BOOL onGround SHOULD I KEEP A BOOL OR A ENUM? ENUM SEEMS TO BE MORE WORK
     // jumpStartTime: f64 = 0.0,
     damageBounce: f32 = -200.0,
+    spped: f32 = 100.0,
     canSwim: bool = false,
     onGround: bool = true,
     isFalling: bool = false,
@@ -46,10 +47,15 @@ pub const Player = struct {
         self.allocator.destroy(self);
     }
     pub fn handleMovement(self: *Self, dt: f32) void {
-        if (rayLib.isKeyDown(rayLib.KeyboardKey.d)) {
+        if (self.velocityX > 0 and (!rayLib.isKeyDown(.d) or !rayLib.isKeyDown(.a))) {
+            self.velocityX = 0.0;
+        }
+        if (rayLib.isKeyDown(.d)) {
+            self.velocityX = self.spped;
             self.rect.position.x += self.velocityX * self.speedMultiplier * dt;
             self.checkBounds(MOVE.RIGHT);
-        } else if (rayLib.isKeyDown(rayLib.KeyboardKey.a)) {
+        } else if (rayLib.isKeyDown(.a)) {
+            self.velocityX = self.spped;
             self.rect.position.x -= self.velocityX * self.speedMultiplier * dt;
             self.checkBounds(MOVE.LEFT);
         } else if (rayLib.isKeyPressed(rayLib.KeyboardKey.w) and self.onGround) {
@@ -122,7 +128,6 @@ pub const Player = struct {
         self.onGround = false;
     }
     pub fn startFalling(self: *Self, dt: f32) void {
-        std.debug.print("START-FALLING\n", .{});
         self.onGround = false;
         self.velocityY = self.fallingSpeed;
         self.velocityY += GRAVITY * dt;
