@@ -169,7 +169,7 @@ pub const Game = struct {
                 if (self.player.rect.position.y >= platform.rect.position.y) {
                     std.debug.print("HIT BOTTOM OF PLATFORM\n", .{});
                     self.currentTime = 0.0;
-                    self.player.setVelocity(VELOCITY.Y, 0.0)
+                    self.player.setVelocity(VELOCITY.Y, 0.0);
                     self.player.rect.position.y = platform.rect.position.y + platform.rect.height;
                     self.player.startFalling(dt);
                 }
