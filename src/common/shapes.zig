@@ -31,6 +31,16 @@ pub const Rectangle = struct {
             self.position.y + self.height > other.position.y;
         return xOverlap and yOverlap;
     }
+    pub fn intersectX(self: Self, other: Rectangle) bool {
+        const xOverlap = self.position.x < other.position.x + other.width and
+            self.position.x + self.width > other.position.x;
+        return xOverlap;
+    }
+    pub fn intersectY(self: Self, other: Rectangle) bool {
+        const yOverlap = self.position.y < other.position.y + other.height and
+            self.position.y + self.height > other.position.y;
+        return yOverlap;
+    }
     pub fn draw(self: Self) void {
         rayLib.drawRectangle(
             @as(i32, @intFromFloat(self.position.x)),

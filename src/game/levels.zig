@@ -63,7 +63,7 @@ pub fn createLevel0(allocator: std.mem.Allocator, staticPlatforms: comptime_int)
         PLATFORM_TYPES.VERTICAL,
         200.0,
         50.0,
-        rayLib.Vector2.init(300.0, -200.0),
+        rayLib.Vector2.init(200.0, -200.0),
         .green,
         false,
         false,

@@ -9,6 +9,8 @@ const PLATFORM_TYPES = @import("../types.zig").PLATFORM_TYPES;
 const Levels = @import("./levels.zig").Levels;
 const createLevel0 = @import("./levels.zig").createLevel0;
 const GRAVITY = @import("../types.zig").GRAVITY;
+const PLAYER_STATE = @import("../types.zig").PLAYER_STATE;
+const VELOCITY = @import("../types.zig").VELOCITY;
 
 const Config = struct {
     const Self = @This();
@@ -20,7 +22,7 @@ const Config = struct {
     pub fn init() Self {
         return .{
             .fps = 60,
-            .windowHeight = 800,
+            .windowHeight = 600,
             .windowWidth = 800,
             .windowTitle = "Game",
         };
@@ -132,11 +134,17 @@ pub const Game = struct {
     fn renderStaticLevelPlatforms(self: *Self, dt: f32, level: *Levels) void {
         for (level.staticPlatforms) |platform| {
             platform.draw();
-            //Check collision for this platform
             self.checkForIntersection(dt, platform);
-            std.debug.print("PPP playerX: {d} playerY: {d} playerH: {d} playerW: {d} playerGetH: {d} playerGetW: {d} playerStat: {any} platFormT: {any} platformX: {d} platformY: {d} platformH: {d} platformW: {d} platformGetH: {d} platformGetW: {d} damage: {d} dealDamage: {any}\n", .{
+            self.checkForIntersection(dt, platform);
+        }
+    }
+    fn checkForIntersection(self: *Self, dt: f32, platform: Platform) void {
+        if (self.player.rect.intersects(platform.rect)) {
+            std.debug.print("INTERSECTED playerX: {d} playerY: {d} playerVelY: {d} isFalling: {any} playerH: {d} playerW: {d} playerGetH: {d} playerGetW: {d} playerStat: {any} platFormT: {any} platformX: {d} platformY: {d} platformH: {d} platformW: {d} platformGetH: {d} platformGetW: {d} damage: {d} dealDamage: {any}\n", .{
                 self.player.rect.position.x,
                 self.player.rect.position.y,
+                self.player.velocityY,
+                self.player.getIsFalling(),
                 self.player.rect.height,
                 self.player.rect.width,
                 self.player.rect.getHeight(),
@@ -152,87 +160,58 @@ pub const Game = struct {
                 platform.damageAmount,
                 platform.dealDamage,
             });
-            self.handleCollisions(dt, platform);
-            if (platform.dealDamage and self.player.getPlayerState() == .INTERSECTED) {
+            if (self.player.velocityY > 0) {
+                self.player.velocityY = 0;
+                self.player.rect.position.y = platform.rect.position.y - self.player.rect.height;
+                self.player.setIsOnGround(true);
+                self.player.setIsFalling(false);
+            } else if (self.player.velocityY < 0) {
+                if (self.player.rect.position.y >= platform.rect.position.y) {
+                    std.debug.print("HIT BOTTOM OF PLATFORM\n", .{});
+                    self.currentTime = 0.0;
+                    self.player.setVelocity(VELOCITY.Y, 0.0)
+                    self.player.rect.position.y = platform.rect.position.y + platform.rect.height;
+                    self.player.startFalling(dt);
+                }
+            }
+            if (platform.dealDamage and self.player.onGround) {
                 self.handleDamage(dt, platform.damageOverTime, platform.damageAmount);
             }
-        }
-    }
-    fn handleCollisions(self: *Self, dt: f32, platform: Platform) void {
-        // PLAYER ON TOP OF A PLATFORM
-        if (self.player.getPlayerState() == .INTERSECTED and platform.rect.position.y - self.player.rect.height == self.player.rect.position.y) {
-            std.debug.print("ON TOP OF PLATFORM platformHeight: {d} playerY: {d}\n", .{ platform.rect.position.y - self.player.rect.height, self.player.rect.position.y });
+            // PLAYER ON PLATFORM AND WILL FALL
+        } else if (platform.rect.position.y - self.player.rect.height == self.player.rect.position.y) {
             if (self.player.rect.getWidth() < platform.rect.position.x or self.player.rect.position.x > platform.rect.getWidth()) {
-                // PLAYER FALLS OFF PLATFORM
-                self.player.velocityY = self.player.fallingSpeed;
-                self.player.velocityY += GRAVITY * dt;
-                self.player.rect.position.y += self.player.velocityY * dt;
-                self.player.setPlayerState(.FALLING);
+                self.player.startFalling(dt);
                 self.checkForIntersection(dt, platform);
             }
-            // else if (self.player.rect.height >= platform.rect.getHeight()) {
-            //     std.debug.print("ON WATER {any}\n", .{platform.platFormType});
-            // }
-        }
-        // PLAYER IS ON GROUND LEVEL
-        if (self.player.getPlayerState() == .GROUNDED) {
+        } else if (self.player.onGround) {
             if (self.player.rect.position.x > platform.rect.getWidth() and platform.platFormType == .GROUND) {
                 // FELL FROM PLATFORM
-                self.player.velocityY = self.player.fallingSpeed;
-                self.player.velocityY += GRAVITY * dt;
-                self.player.rect.position.y += self.player.velocityY * dt;
-                self.player.setPlayerState(.FALLING);
+                self.player.startFalling(dt);
                 self.checkForIntersection(dt, platform);
-            }
-        }
-    }
-    fn checkForIntersection(self: *Self, dt: f32, platform: Platform) void {
-        if (self.player.rect.intersects(platform.rect)) {
-            // Only if falling down
-            //self.player.velocityY > 0
-            if (self.player.getPlayerState() == .FALLING) {
-                self.player.rect.position.y = platform.rect.position.y - self.player.rect.height;
-                self.player.velocityY = 0;
-                if (self.player.getPlayerState() == .FALLING) {
-                    self.player.setPlayerState(.INTERSECTED);
-                }
-                if (self.player.getPlayerState() == .INTERSECTED and platform.dealDamage) {
-                    self.player.setPlayerState(.GROUNDED);
-                    self.handleDamage(dt, platform.damageOverTime, platform.damageAmount);
-                }
-                if (platform.platFormType == .GROUND) {
-                    self.player.setPlayerState(.GROUNDED);
-                }
             }
         }
     }
     fn handleDamage(self: *Self, dt: f32, damageOverTime: bool, damageAmount: f32) void {
         if (self.currentTime == 0.0) {
             self.currentTime = rayLib.getTime();
-        }
-        if (!damageOverTime) {
             self.player.setDamage(damageAmount);
             self.widgets.healthBarRect.width = self.player.getHealth();
-            self.player.applyDamageBound(dt);
+            self.player.applyDamageBounce(dt);
         }
         const elapsedTime = rayLib.getTime() - self.currentTime;
         if (damageOverTime and elapsedTime > 1.0) {
             self.player.setDamage(damageAmount);
             self.widgets.healthBarRect.width = self.player.getHealth();
-            std.debug.print("DAMAGE playerState {any}\n", .{self.player.getPlayerState()});
-            // self.player.applyDamageBound(dt);
+            self.player.applyDamageBounce(dt);
         }
-        // if (self.player.health < 0) {
-        //     self.handleGameOver();
-        // }
+        if (self.player.health < 0) {
+            self.handleGameOver();
+        }
     }
     fn resetGameState(self: *Self) void {
-        self.player.velocityX = 0.0;
-        self.player.setPlayerState(.ALIVE);
-        self.player.rect.position.x = 0.0;
         self.isGameOver = false;
-        self.player.rect.position.y = @as(f32, @floatFromInt(rayLib.getScreenHeight())) - 80.0;
         self.currentTime = 0.0;
+        self.player.reset();
     }
     fn handleGameOver(self: *Self) void {
         self.player.setPlayerState(.DEAD);

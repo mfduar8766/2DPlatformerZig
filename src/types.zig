@@ -101,3 +101,8 @@ pub const PLAYER_STATE = enum(u8) {
     TAKING_DAMAGE = 7,
     ON_TOP = 8,
 };
+
+pub const VELOCITY = enum(u2) {
+    X = 0,
+    Y = 1,
+};
