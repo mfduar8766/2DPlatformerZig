@@ -57,6 +57,7 @@ const Widgets = struct {
 pub const Game = struct {
     const Self = @This();
     const totalLevels: usize = 3;
+    const lerpFactor = 8.0;
     allocator: std.mem.Allocator,
     config: Config,
     player: *Player,
@@ -75,7 +76,7 @@ pub const Game = struct {
             .widgets = Widgets.init(),
         };
         inline for (0..totalLevels) |i| {
-            const platforms = try createLevel0(allocator, 4);
+            const platforms = try createLevel0(allocator, 5);
             gamePtr.levelsList[i] = try Levels.init(allocator, platforms);
         }
         return gamePtr;
@@ -88,8 +89,9 @@ pub const Game = struct {
         self.allocator.destroy(self);
     }
     pub fn run(self: *Self) void {
-        rayLib.setTargetFPS(self.config.fps);
         rayLib.initWindow(self.config.windowWidth, self.config.windowHeight, self.config.windowTitle);
+        defer rayLib.closeWindow(); // Good practice to close window on exit
+        rayLib.setTargetFPS(self.config.fps);
         var camera = rayLib.Camera2D{
             .target = self.player.rect.position,
             .offset = rayLib.Vector2.init(
@@ -97,107 +99,133 @@ pub const Game = struct {
                 @as(f32, @floatFromInt(self.config.windowHeight)) - 80.0,
             ),
             .rotation = 0.0,
-            .zoom = 1.0,
+            .zoom = 0.75, // Zoomed out slightly to see more world
         };
+
         while (!rayLib.windowShouldClose()) {
             const dt = rayLib.getFrameTime();
-            self.player.handleMovement(dt);
-            camera.target = self.player.rect.position;
-
-            rayLib.beginDrawing();
-            defer rayLib.endDrawing();
-
             if (self.isGameOver) {
-                rayLib.clearBackground(.black);
                 self.resetGameState();
+                // Skip the rest of this frame so we start fresh
+                continue;
             }
-            if (!self.isGameOver) {
-                rayLib.clearBackground(rayLib.Color.sky_blue);
+            const level = self.levelsList[self.currentLevel];
+
+            //1. UPDATE PHASE (Physics & Logic)
+            self.player.handleMovement(dt);
+            var isOnGround = false;
+            for (level.staticPlatforms) |platform| {
+                // Use your existing intersection check
+                // It should 'snap' the player's Y if a collision is found
+                self.checkForIntersection(dt, platform);
+                if (self.isOnTopOfPlatform(platform)) {
+                    isOnGround = true;
+                }
             }
+            self.player.setIsOnGround(isOnGround);
+            //Update Camera (Follow the SNAPPED position)
+            camera.target.x += (self.player.rect.position.x - camera.target.x) * lerpFactor * dt;
+            camera.target.y += (self.player.rect.position.y - camera.target.y) * lerpFactor * dt;
 
-            self.widgets.draw();
-
+            //2. DRAW PHASE (Rendering only)
+            //No physics or 'checkForIntersection' allowed inside here!
+            rayLib.beginDrawing();
+            rayLib.clearBackground(rayLib.Color.sky_blue);
             rayLib.beginMode2D(camera);
-            self.drawWorld(dt);
+            for (level.staticPlatforms) |platform| {
+                platform.draw();
+            }
             self.player.draw();
             rayLib.endMode2D();
-        }
-    }
-    fn drawWorld(self: *Self, dt: f32) void {
-        const level = self.levelsList[self.currentLevel];
-        self.renderStaticLevelPlatforms(dt, level);
-    }
-    fn renderStaticLevelPlatforms(self: *Self, dt: f32, level: *Levels) void {
-        for (level.staticPlatforms) |platform| {
-            platform.draw();
-            self.checkForIntersection(dt, platform);
+            self.widgets.draw();
+            rayLib.endDrawing();
         }
     }
     fn checkForIntersection(self: *Self, dt: f32, platform: Platform) void {
+        // 1. Check for actual physical overlap
         if (self.player.rect.intersects(platform.rect)) {
-            std.debug.print("INTERSECTED playerX: {d} playerY: {d} playerVelY: {d} playerVelX: {d} isFalling: {any} playerH: {d} playerW: {d} playerGetH: {d} playerGetW: {d} playerStat: {any} platFormT: {any} platformX: {d} platformY: {d} platformH: {d} platformW: {d} platformGetH: {d} platformGetW: {d} damage: {d} dealDamage: {any}\n", .{
-                self.player.rect.position.x,
-                self.player.rect.position.y,
-                self.player.getVelocity(.Y),
-                self.player.getVelocity(.X),
-                self.player.getIsFalling(),
-                self.player.rect.height,
-                self.player.rect.width,
-                self.player.rect.getHeight(),
-                self.player.rect.getWidth(),
-                self.player.getPlayerState(),
-                platform.rect.objectType,
-                platform.rect.position.x,
-                platform.rect.position.y,
-                platform.rect.height,
-                platform.rect.width,
-                platform.rect.getHeight(),
-                platform.rect.getWidth(),
-                platform.damageAmount,
-                platform.dealDamage,
-            });
-            // PLAYER JUMPS AND COLLIDES WITH SIDE OF PLATFORM IN MID AIR
-            if (self.player.getVelocity(.X) > 0 and !self.player.getIsOnGround()) {
-                if (self.player.rect.position.x >= platform.rect.position.x or self.player.rect.position.x <= platform.rect.getWidth()) {
-                    std.debug.print("PLAYER JUMPS AND MOVES RIGHT AND TOUCHES PLATFORM\n", .{});
-                    self.player.setVelocity(.X, 0.0);
+            // CASE: Falling onto a platform (Landing)
+            if (self.player.velocityY > 0) {
+                // Only land if we are actually above the platform's surface
+                // This prevents "teleporting" to the top if we hit the side
+                if (self.player.rect.position.y < platform.rect.getTopEdge()) {
+                    self.player.rect.position.y = platform.rect.getTopEdge() - self.player.rect.height;
                     self.player.setVelocity(.Y, 0.0);
-                    self.player.rect.position.x -= self.player.rect.position.x / 2;
+                    // Note: We don't touch Velocity X here so the player can still walk!
+                }
+            }
+
+            // CASE: Jumping into the bottom of a platform (Head Bump)
+            else if (self.player.getVelocity(.Y) < 0) {
+                // Only bump if our head is actually below the bottom edge
+                if (self.player.rect.position.y > platform.rect.getTopEdge()) {
+                    self.player.rect.position.y = platform.rect.getBottomEdge();
+                    self.player.setVelocity(.Y, 0.0);
                     self.player.startFalling(dt);
                 }
             }
-            if (self.player.getVelocity(.Y) > 0) {
-                self.player.setVelocity(.Y, 0.0);
-                self.player.setVelocity(.X, 0.0);
-                self.player.rect.position.y = platform.rect.position.y - self.player.rect.height;
-                self.player.setIsOnGround(true);
-                self.player.setIsFalling(false);
-            } else if (self.player.velocityY < 0) {
-                if (self.player.rect.position.y >= platform.rect.position.y) {
-                    std.debug.print("HIT BOTTOM OF PLATFORM\n", .{});
-                    self.currentTime = 0.0;
-                    self.player.setVelocity(.Y, 0.0);
-                    self.player.setVelocity(.X, 0.0);
-                    self.player.rect.position.y = platform.rect.position.y + platform.rect.height;
-                    self.player.startFalling(dt);
-                }
-            }
-            if (platform.dealDamage and self.player.onGround) {
+
+            // Damage Logic
+            if (platform.dealDamage) {
                 self.handleDamage(dt, platform.damageOverTime, platform.damageAmount);
             }
-            // PLAYER ON PLATFORM AND WILL FALL
-        } else if (platform.rect.position.y - self.player.rect.height == self.player.rect.position.y) {
-            if (self.player.rect.getWidth() < platform.rect.position.x or self.player.rect.position.x > platform.rect.getWidth()) {
+        } else {
+            // 2. If NOT intersecting, check if we just walked off an edge
+            // If the player thinks they are grounded, but they are no longer
+            // horizontally aligned with THIS platform:
+            if (self.isOnSurface(platform) and self.isOffTheEdge(platform)) {
+                // We don't need to call checkForIntersection again.
+                // Just let gravity take over in the next frame.
                 self.player.startFalling(dt);
-                self.checkForIntersection(dt, platform);
-            }
-        } else if (self.player.onGround) {
-            if (self.player.rect.position.x > platform.rect.getWidth() and platform.platFormType == .GROUND) {
-                // FELL FROM PLATFORM
-                self.player.startFalling(dt);
-                self.checkForIntersection(dt, platform);
             }
         }
+    }
+    ///Check if the player is horizontally overlapping the platform
+    fn isWithinHorizontalBounds(self: Self, platform: Platform) bool {
+        return self.player.rect.getRightEdge() > platform.rect.getLeftEdge() and
+            self.player.rect.getLeftEdge() < platform.rect.getRightEdge();
+    }
+    fn isOffTheEdge(self: Self, platform: Platform) bool {
+        return self.player.rect.getRightEdge() < platform.rect.position.x or self.player.rect.position.x > platform.rect.getRightEdge();
+    }
+    fn isOnSurface(self: Self, platform: Platform) bool {
+        // platform.rect.position.y - self.player.rect.height == self.player.rect.position.y
+        // 1. Check Horizontal (Aligned)
+        if (!self.isWithinHorizontalBounds(platform)) return false;
+
+        // 2. Check Vertical (Touching Surface)
+        const pBottom = self.player.rect.getBottomEdge();
+        const platTop = platform.rect.getTopEdge();
+
+        // Check if player's feet are within 1 pixel of the platform top
+        const touchingSurface = @abs(pBottom - platTop) < 1.0;
+        return touchingSurface;
+    }
+    fn isOnTopOfPlatform(self: Self, platform: Platform) bool {
+        // 1. Horizontal check (already works!)
+        if (!self.isWithinHorizontalBounds(platform)) return false;
+
+        const playerBottom = self.player.rect.getBottomEdge();
+        const platformTop = platform.rect.getTopEdge();
+
+        // 2. Are the feet between the top of the platform and a little bit inside it?
+        // We check if the player is within a "skin" or "buffer" area (e.g., 4 pixels).
+        const isFallingOrStanding = self.player.velocityY >= 0;
+        const isAtCorrectHeight = playerBottom >= platformTop and playerBottom <= platformTop + 4.0;
+
+        return isFallingOrStanding and isAtCorrectHeight;
+    }
+    fn colliedWithgetLeftEdge(self: Self, platform: Platform) bool {
+        return self.player.rect.getRightEdge() >= platform.rect.getLeftEdge();
+    }
+    fn collidedWithgetRightEdge(self: Self, platform: Platform) bool {
+        return self.player.rect.getLeftEdge() <= platform.rect.getRightEdge();
+    }
+    fn collidedWithBottom(self: Self, platform: Platform) bool {
+        return self.player.rect.getTopEdge() >= platform.rect.getBottomEdge();
+    }
+    fn collidedWithTop(self: Self, platform: Platform) bool {
+        return self.player.rect.getBottomEdge() >= platform.rect.getTopEdge();
     }
     fn handleDamage(self: *Self, dt: f32, damageOverTime: bool, damageAmount: f32) void {
         if (self.currentTime == 0.0) {
@@ -229,3 +257,17 @@ pub const Game = struct {
         self.isGameOver = true;
     }
 };
+
+// std.debug.print("INTERSECTED playerX: {d} playerVelY: {d} playerVelX: {d} isFalling: {any} playerGetTop: {d} playerGetBottom: {d} playerStat: {any} platFormT: {any} platformX: {d} platformGetTop: {d} platformGetBottom: {d}\n", .{
+//     self.player.rect.position.x,
+//     self.player.getVelocity(.Y),
+//     self.player.getVelocity(.X),
+//     self.player.getIsFalling(),
+//     self.player.rect.getTopEdge(),
+//     self.player.rect.getBottomEdge(),
+//     self.player.getPlayerState(),
+//     platform.rect.objectType,
+//     platform.rect.position.x,
+//     platform.rect.getTopEdge(),
+//     platform.rect.getBottomEdge(),
+// });

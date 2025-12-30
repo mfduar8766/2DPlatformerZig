@@ -39,31 +39,27 @@ pub fn createLevel0(allocator: std.mem.Allocator, comptime staticPlatforms: usiz
         PLATFORM_TYPES.GROUND,
         300.0,
         100.0,
-        // rayLib.Vector2.init(
-        //     @as(f32, @floatFromInt(1500)) / 2.0,
-        //     @as(f32, @floatFromInt(1500)) / 2.0,
-        // ),
         rayLib.Vector2.init(0.0, @as(f32, @floatFromInt(rayLib.getScreenHeight())) - 30.0),
         .green,
         false,
         false,
     );
-    // const ground2 = Platform.init(
-    //     // allocator,
-    //     PLATFORM_TYPES.GROUND,
-    //     300.0,
-    //     100.0,
-    //     rayLib.Vector2.init(301.0, @as(f32, @floatFromInt(rayLib.getScreenHeight())) - 30.0),
-    //     .green,
-    //     false,
-    //     false,
-    // );
+    const ground2 = Platform.init(
+        // allocator,
+        PLATFORM_TYPES.GROUND,
+        300.0,
+        100.0,
+        rayLib.Vector2.init(301.0, @as(f32, @floatFromInt(rayLib.getScreenHeight())) - 30.0),
+        .green,
+        false,
+        false,
+    );
     const water = Platform.init(
         // allocator,
         PLATFORM_TYPES.WATER,
         500.0,
-        30.0,
-        rayLib.Vector2.init(ground.rect.getWidth(), @as(f32, @floatFromInt(rayLib.getScreenHeight())) - 20.0),
+        100.0,
+        rayLib.Vector2.init(ground2.rect.getRightEdge(), @as(f32, @floatFromInt(rayLib.getScreenHeight())) - 10.0),
         .dark_blue,
         true,
         true,
@@ -78,15 +74,16 @@ pub fn createLevel0(allocator: std.mem.Allocator, comptime staticPlatforms: usiz
         false,
         false,
     );
-    // const verticalPlatform0 = Platform.init(
-    //     // allocator,
-    //     PLATFORM_TYPES.VERTICAL,
-    //     200.0,
-    //     50.0,
-    //     rayLib.Vector2.init(300.0, 1280.0),
-    //     .green,
-    //     false,
-    // );
+    const verticalPlatform0 = Platform.init(
+        // allocator,
+        PLATFORM_TYPES.VERTICAL,
+        200.0,
+        50.0,
+        rayLib.Vector2.init(400.0, -300.0),
+        .green,
+        false,
+        false,
+    );
     // const icePlatform = Platform.init(
     //     // allocator,
     //     PLATFORM_TYPES.ICE,
@@ -99,10 +96,10 @@ pub fn createLevel0(allocator: std.mem.Allocator, comptime staticPlatforms: usiz
     // );
 
     list[0] = ground;
-    // list[1] = ground2;
-    list[1] = water;
-    list[2] = verticalPlatform;
-    // list[3] = verticalPlatform;
+    list[1] = ground2;
+    list[2] = water;
+    list[3] = verticalPlatform;
+    list[4] = verticalPlatform0;
     // list[4] = icePlatform;
     return list;
 }

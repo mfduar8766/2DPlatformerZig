@@ -25,21 +25,15 @@ pub const Rectangle = struct {
         };
     }
     pub fn intersects(self: Self, other: Rectangle) bool {
-        const xOverlap = self.position.x < other.position.x + other.width and
-            self.position.x + self.width > other.position.x;
-        const yOverlap = self.position.y < other.position.y + other.height and
-            self.position.y + self.height > other.position.y;
-        return xOverlap and yOverlap;
-    }
-    pub fn intersectX(self: Self, other: Rectangle) bool {
-        const xOverlap = self.position.x < other.position.x + other.width and
-            self.position.x + self.width > other.position.x;
-        return xOverlap;
-    }
-    pub fn intersectY(self: Self, other: Rectangle) bool {
-        const yOverlap = self.position.y < other.position.y + other.height and
-            self.position.y + self.height > other.position.y;
-        return yOverlap;
+        return self.getRightEdge() >= other.getLeftEdge() and
+            self.getLeftEdge() <= other.getRightEdge() and
+            self.getBottomEdge() >= other.getTopEdge() and
+            self.getTopEdge() <= other.getBottomEdge();
+        // const xOverlap = self.position.x < other.position.x + other.width and
+        //     self.position.x + self.width > other.position.x;
+        // const yOverlap = self.position.y < other.position.y + other.height and
+        //     self.position.y + self.height > other.position.y;
+        // return xOverlap and yOverlap;
     }
     pub fn draw(self: Self) void {
         rayLib.drawRectangle(
@@ -50,10 +44,37 @@ pub const Rectangle = struct {
             self.color,
         );
     }
-    pub fn getHeight(self: Self) f32 {
+    ///This is the bottom edge of the platform
+    ///
+    ///For example:
+    ///If the platform is 50X50 and the vector is (300.0, -200.0)
+    /// The bottom of the platform is -200.0+50.0 = -150.0
+    ///
+    /// This is the bottom of the rectangle
+    pub fn getBottomEdge(self: Self) f32 {
         return self.position.y + self.height;
     }
-    pub fn getWidth(self: Self) f32 {
+    ///This is the top of the rectangle or the acual surface where the player can walk on position Y
+    pub fn getTopEdge(self: Self) f32 {
+        return self.position.y;
+    }
+    pub fn getCenter(self: Self) f32 {
+        self.position.y + (self.height / 2);
+    }
+    ///This gets the horizontal line of the platform
+    ///
+    /// For example:
+    ///
+    /// If the vector is (200.0, 200.0) and the width is 300 then then right edge, or the width of the platform is 200+300 = 500
+    ///
+    /// Anything with an X-coordinate less than 500 is to the left of that edge.
+    ///
+    ///Anything with an X-coordinate greater than 500 has moved past the platform.
+    pub fn getRightEdge(self: Self) f32 {
         return self.position.x + self.width;
+    }
+    ///This retuns the left side of the rectangle position X
+    pub fn getLeftEdge(self: Self) f32 {
+        return self.position.x;
     }
 };
