@@ -18,5 +18,5 @@ pub fn main() !void {
         const deinit_status = gpa.deinit();
         if (deinit_status == .leak) @panic("Main::main()::leaking memory exiting program...");
     }
-    game.run();
+    try game.run();
 }

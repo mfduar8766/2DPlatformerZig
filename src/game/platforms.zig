@@ -6,13 +6,12 @@ const Rectangle = @import("../common/shapes.zig").Rectangle;
 
 pub const Platform = struct {
     const Self = @This();
-    platFormType: PLATFORM_TYPES = PLATFORM_TYPES.GROUND,
+    platFormType: PLATFORM_TYPES,
     rect: Rectangle,
     dealDamage: bool = false,
     damageAmount: f32 = 0,
     damageOverTime: bool = false,
     pub fn init(
-        // alloocator: std.mem.Allocator,
         platFormType: PLATFORM_TYPES,
         width: f32,
         height: f32,
@@ -22,7 +21,6 @@ pub const Platform = struct {
         damageOverTime: bool,
     ) Self {
         var platForm = Self{
-            // .allocator = alloocator,
             .rect = Rectangle.init(
                 GAME_OBJECT_TYPES{ .PLATFORM = platFormType },
                 width,
@@ -37,14 +35,11 @@ pub const Platform = struct {
         platForm.setDamageAmount(platFormType);
         return platForm;
     }
-    pub fn deinit(_: *Self) void {
-        // if (self.allocator) |allocator| {
-        //     allocator.destroy(self);
-        // }
-        // self.allocator.destroy(self);
-    }
     pub fn draw(self: Self) void {
         self.rect.draw();
+    }
+    pub fn getRect(self: Self) Rectangle {
+        return self.rect;
     }
     fn setDamageAmount(self: *Self, platForm: PLATFORM_TYPES) void {
         switch (platForm) {
