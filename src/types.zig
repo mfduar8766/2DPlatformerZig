@@ -83,13 +83,19 @@ pub const UI_TYPES = enum(u2) {
     STAMINA_BAR = 1,
 };
 
+pub const LEVEL_TYPES = enum(u8) {
+    STANDARD = 0,
+    MINI_BOSS = 1,
+    BOSS = 2,
+};
+
 pub const GAME_OBJECT_TYPES = union(enum) {
     PLAYER: u2, // Player uses a simple integer type
     PLATFORM: PLATFORM_TYPES, // Platform can hold values from PLATFORM_TYPES
     ENEMY: ENEMY_TYPES, // Enemy can hold values from ENEMY_TYPE
     UI: UI_TYPES,
     CAMERA: u2,
-    LEVEL: u8,
+    LEVEL: usize,
     WORLD: u8,
 };
 

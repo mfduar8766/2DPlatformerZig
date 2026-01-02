@@ -16,7 +16,7 @@ pub const Player = struct {
     jumpHeight: f32 = -200.0,
     speedMultiplier: f32 = 2.0,
     jumpMultiplier: f32 = 2.0,
-    fallingSpeed: f32 = 200.0,
+    fallingSpeed: f32 = 100.0,
     fallingMultiplier: f32 = 2.0,
     health: f32 = 100.0,
     stamina: f32 = 100.0,
@@ -172,7 +172,6 @@ pub const Player = struct {
                 }
             },
             MOVE.RIGHT => {
-                // Stop at the absolute end of the last level (3000)
                 if (self.rect.getRightEdge() >= worldBounds.getRightEdge()) {
                     self.rect.setPosition(.X, worldBounds.getRightEdge() - self.getRect().getWidth());
                 }

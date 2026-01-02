@@ -12,6 +12,8 @@ const createLevel1 = @import("./levels.zig").createLevel1;
 const GRAVITY = @import("../types.zig").GRAVITY;
 const PLAYER_STATE = @import("../types.zig").PLAYER_STATE;
 const Utils = @import("../utils/utils.zig");
+const CreateLevels = @import("levels.zig").CreateLevels;
+const World = @import("./levels.zig").World;
 
 pub const Config = struct {
     const Self = @This();
@@ -70,6 +72,9 @@ pub const Game = struct {
     currentTime: f64 = 0.0,
     //const worldBounds = rayLib.Rectangle.init(0, 0, 3000.0, screenH);
     worldSize: Rectangle = undefined,
+    levels2: *CreateLevels(totalLevels) = undefined,
+    world: *World(totalLevels) = undefined,
+
     pub fn init(allocator: std.mem.Allocator) !*Self {
         const gamePtr = try allocator.create(Self);
         var config = Config.init();
@@ -83,22 +88,27 @@ pub const Game = struct {
         return gamePtr;
     }
     pub fn deinit(self: *Self) void {
-        for (self.levelsList) |level| {
-            level.deinit();
-        }
+        // for (self.levelsList) |level| {
+        //     level.deinit();
+        // }
+        // for (self.levels2.levels) |value| {
+        //     value.deinit();
+        // }
+        // self.levels2.deinit();
+        self.world.deinit();
+        self.allocator.destroy(self.world);
+        // self.allocator.destroy(self.levels2);
         self.player.deinit();
         self.allocator.destroy(self);
     }
     pub fn run(self: *Self) !void {
         rayLib.initWindow(self.config.windowWidth, self.config.windowHeight, self.config.windowTitle);
         defer rayLib.closeWindow();
-
-        try self.createGameObjects();
         rayLib.setTargetFPS(self.config.fps);
 
+        try self.createGameObjects();
         const screenH = Utils.floatFromInt(f32, rayLib.getScreenHeight());
         const screenW = Utils.floatFromInt(f32, rayLib.getScreenWidth());
-
         var camera = rayLib.Camera2D{
             .target = self.player.rect.getPosition(),
             .offset = rayLib.Vector2.init(
@@ -116,7 +126,7 @@ pub const Game = struct {
                 continue;
             }
 
-            const currentLevelObj = self.levelsList[self.currentLevel];
+            const currentLevelObj = self.world.levels[self.currentLevel];
             const playerRect = self.player.getRect();
             const playerCenterX = playerRect.getPosition().x + (playerRect.getWidth() / 2.0);
 
@@ -126,7 +136,7 @@ pub const Game = struct {
 
             // Seamless Level Switching based on Player Center
             if (playerCenterX > currentLevelObj.getRect().getRightEdge()) {
-                if (self.currentLevel < self.levelsList.len - 1) {
+                if (self.currentLevel < self.world.levels.len - 1) {
                     self.currentLevel += 1;
                 }
             } else if (playerCenterX < currentLevelObj.getRect().getPosition().x) {
@@ -142,8 +152,8 @@ pub const Game = struct {
 
             for (checkOffsets) |offset| {
                 const idx = @as(isize, @intCast(self.currentLevel)) + offset;
-                if (idx >= 0 and idx < self.levelsList.len) {
-                    const targetLevel = self.levelsList[@as(usize, @intCast(idx))];
+                if (idx >= 0 and idx < self.world.levels.len) {
+                    const targetLevel = self.world.levels[@as(usize, @intCast(idx))];
                     for (targetLevel.staticPlatforms) |platform| {
                         self.checkForIntersection(dt, platform);
                         // Critical: set ground flag regardless of which level the platform belongs to
@@ -168,8 +178,8 @@ pub const Game = struct {
             camera.target.y += (self.player.rect.getPosition().y - camera.target.y) * lerpFactor * dt;
 
             // Global World Clamping (Stops camera at very beginning and very end of ALL levels)
-            const startOfWorld = self.levelsList[0].getRect().getPosition().x;
-            const endOfWorld = self.levelsList[self.levelsList.len - 1].getRect().getRightEdge();
+            const startOfWorld = self.world.levels[0].getRect().getPosition().x;
+            const endOfWorld = self.world.levels[self.world.levels.len - 1].getRect().getRightEdge();
             const halfViewX = (screenW / 2.0) / camera.zoom;
 
             const leftLimit = startOfWorld + halfViewX;
@@ -192,7 +202,7 @@ pub const Game = struct {
             rayLib.clearBackground(rayLib.Color.sky_blue);
             rayLib.beginMode2D(camera);
             // Draw platforms from ALL levels, but only if they are on screen (Culling)
-            for (self.levelsList) |lvl| {
+            for (self.world.levels) |lvl| {
                 for (lvl.staticPlatforms) |platform| {
                     if (rayLib.checkCollisionRecs(cameraRect, platform.rect.rect)) {
                         platform.draw();
@@ -209,35 +219,45 @@ pub const Game = struct {
         self.widgets = Widgets.init();
         try self.createLevels();
         self.player = try Player.init(self.allocator, self.config);
+
+        // const l = try CreateLevels(totalLevels).init(self.allocator);
+        // defer l.deinit();
     }
     fn createLevels(self: *Self) !void {
-        const level0 = try Levels.init(
-            self.allocator,
-            try createLevel0(self.allocator, 7),
-            Rectangle.init(
-                .{ .LEVEL = 0 },
-                1500.0,
-                Utils.floatFromInt(f32, rayLib.getScreenHeight()),
-                rayLib.Vector2.init(0.0, 0.0),
-                rayLib.Color.init(0, 0, 0, 0), //fade(rayLib.Color.white, 0.5),
-            ),
-        );
-        const level1 = try Levels.init(
-            self.allocator,
-            try createLevel1(self.allocator, 3),
-            Rectangle.init(
-                .{ .LEVEL = 1 },
-                1500.0,
-                Utils.floatFromInt(f32, rayLib.getScreenHeight()),
-                rayLib.Vector2.init(level0.getRect().getRightEdge(), 0.0),
-                rayLib.Color.init(0, 0, 0, 0),
-            ),
-        );
-        const levels = [totalLevels]*Levels{ level0, level1 };
-        self.levelsList = levels;
+        // const level0 = try Levels.init(
+        //     self.allocator,
+        //     try createLevel0(self.allocator, 7),
+        //     Rectangle.init(
+        //         .{ .LEVEL = 0 },
+        //         1500.0,
+        //         Utils.floatFromInt(f32, rayLib.getScreenHeight()),
+        //         rayLib.Vector2.init(0.0, 0.0),
+        //         rayLib.Color.init(0, 0, 0, 0),
+        //     ),
+        // );
+        // const level1 = try Levels.init(
+        //     self.allocator,
+        //     try createLevel1(self.allocator, level0.staticPlatforms[level0.staticPlatforms.len - 1].rect, 3),
+        //     Rectangle.init(
+        //         .{ .LEVEL = 1 },
+        //         1500.0,
+        //         Utils.floatFromInt(f32, rayLib.getScreenHeight()),
+        //         rayLib.Vector2.init(level0.getRect().getRightEdge() + 1, 0.0),
+        //         rayLib.Color.init(0, 0, 0, 0),
+        //     ),
+        // );
+        // const levels = [totalLevels]*Levels{ level0, level1 };
+        // self.levelsList = levels;
+
+        // self.levels2 = try CreateLevels(totalLevels).init(self.allocator);
+        self.world = try World(totalLevels).init(self.allocator);
+        // var worldSize: f32 = 0;
+        // for (self.levels2.levels) |value| {
+        //     worldSize += value.getRect().getWidth();
+        // }
         self.worldSize = Rectangle.init(
             .{ .WORLD = 0 },
-            level0.getRect().getWidth() + level1.getRect().getWidth(),
+            self.world.worldSize,
             Utils.floatFromInt(f32, rayLib.getScreenHeight()),
             rayLib.Vector2.init(0, 0),
             rayLib.Color.init(0, 0, 0, 0),
