@@ -1,0 +1,46 @@
+{
+    "0": {
+        "staticPlatforms": [
+            {
+                "platFormType": "",
+                "rect": {
+                    "objectType": "",
+                    "width": 0,
+                    "height": 0,
+                    "position": [
+                        0,
+                        0
+                    ],
+                    "color": ""
+                },
+                "dealDamage": false,
+                "damageAmount": 0,
+                "damageOverTime": false
+            }
+        ],
+        "dynamicPlatForms": [],
+        "enemies": []
+    },
+    "1": {
+        "staticPlatforms": [
+            {
+                "platFormType": "",
+                "rect": {
+                    "objectType": "",
+                    "width": 0,
+                    "height": 0,
+                    "position": [
+                        0,
+                        0
+                    ],
+                    "color": ""
+                },
+                "dealDamage": false,
+                "damageAmount": 0,
+                "damageOverTime": false
+            }
+        ],
+        "dynamicPlatForms": [],
+        "enemies": []
+    }
+}

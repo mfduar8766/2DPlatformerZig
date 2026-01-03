@@ -6,55 +6,30 @@ const Rectangle = @import("../common/shapes.zig").Rectangle;
 
 pub const Platform = struct {
     const Self = @This();
-    platFormType: PLATFORM_TYPES = PLATFORM_TYPES.GROUND,
+    platformType: PLATFORM_TYPES,
     rect: Rectangle,
-    dealDamage: bool = false,
-    damageAmount: f32 = 0,
-    damageOverTime: bool = false,
     pub fn init(
-        // alloocator: std.mem.Allocator,
-        platFormType: PLATFORM_TYPES,
+        platformType: PLATFORM_TYPES,
         width: f32,
         height: f32,
         position: rayLib.Vector2,
         color: rayLib.Color,
-        dealDamage: bool,
-        damageOverTime: bool,
     ) Self {
-        var platForm = Self{
-            // .allocator = alloocator,
+        return Self{
+            .platformType = platformType,
             .rect = Rectangle.init(
-                GAME_OBJECT_TYPES{ .PLATFORM = platFormType },
+                GAME_OBJECT_TYPES{ .PLATFORM = platformType },
                 width,
-                height, // 30.0
-                position, //rayLib.Vector2.init(0, 0),
+                height,
+                position,
                 color,
             ),
-            .platFormType = platFormType,
-            .dealDamage = dealDamage,
-            .damageOverTime = damageOverTime,
         };
-        platForm.setDamageAmount(platFormType);
-        return platForm;
-    }
-    pub fn deinit(_: *Self) void {
-        // if (self.allocator) |allocator| {
-        //     allocator.destroy(self);
-        // }
-        // self.allocator.destroy(self);
     }
     pub fn draw(self: Self) void {
         self.rect.draw();
     }
-    fn setDamageAmount(self: *Self, platForm: PLATFORM_TYPES) void {
-        switch (platForm) {
-            PLATFORM_TYPES.ICE => {
-                self.damageAmount = 10.0;
-            },
-            PLATFORM_TYPES.WATER => {
-                self.damageAmount = 10.0;
-            },
-            else => {},
-        }
+    pub fn getRect(self: Self) Rectangle {
+        return self.rect;
     }
 };

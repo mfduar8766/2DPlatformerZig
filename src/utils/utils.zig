@@ -834,3 +834,11 @@ pub fn writeAllToFile(file: fs.File, data: []const u8) !void {
     };
     try writer.flush();
 }
+
+pub fn floatFromInt(comptime T: type, int: anytype) T {
+    return @as(T, @floatFromInt(int));
+}
+
+pub fn intFromFloat(comptime T: type, int: anytype) T {
+    return @as(T, @intFromFloat(int));
+}

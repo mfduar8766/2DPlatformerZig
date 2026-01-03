@@ -1,13 +1,50 @@
+const std = @import("std");
 const rayLib = @import("raylib");
 const GAME_OBJECT_TYPES = @import("../types.zig").GAME_OBJECT_TYPES;
+const POSITION = @import("../types.zig").POSITION;
+const PLATFORM = @import("../types.zig").PLATFORM_TYPES;
+
+pub const DamageHandler = struct {
+    const Self = @This();
+    dealDamage: bool = false,
+    damageAmount: f32 = 0,
+    damageOverTime: bool = false,
+
+    pub fn init(dealDamage: bool, damageAmount: f32, damageOverTime: bool) Self {
+        return .{
+            .dealDamage = dealDamage,
+            .damageAmount = damageAmount,
+            .damageOverTime = damageOverTime,
+        };
+    }
+};
+
+pub const ObjectEffects = struct {
+    const Self = @This();
+    bounce: bool = false,
+    bounceAmount: f32 = 0.0,
+    freze: bool = false,
+    instaKill: bool = false,
+    slippery: bool = false,
+
+    pub fn init(bounce: bool, bounceAmount: f32, freeze: bool, instaKill: bool, slippery: bool) Self {
+        return .{
+            .bounce = bounce,
+            .bounceAmount = bounceAmount,
+            .freeze = freeze,
+            .instaKill = instaKill,
+            .slippery = slippery,
+        };
+    }
+};
 
 pub const Rectangle = struct {
     const Self = @This();
-    width: f32,
-    height: f32,
-    position: rayLib.Vector2,
     color: rayLib.Color,
     objectType: GAME_OBJECT_TYPES = GAME_OBJECT_TYPES{ .PLAYER = 0 },
+    rect: rayLib.Rectangle,
+    damage: DamageHandler = undefined,
+    effects: ObjectEffects = undefined,
 
     pub fn init(
         objectType: GAME_OBJECT_TYPES,
@@ -16,33 +53,64 @@ pub const Rectangle = struct {
         position: rayLib.Vector2,
         color: rayLib.Color,
     ) Self {
-        return .{
-            .height = height,
-            .width = width,
-            .position = position,
+        var self = Self{
             .color = color,
             .objectType = objectType,
+            .rect = rayLib.Rectangle.init(position.x, position.y, width, height),
         };
+        self.setDamageAmount();
+        return self;
     }
     pub fn intersects(self: Self, other: Rectangle) bool {
         return self.getRightEdge() >= other.getLeftEdge() and
             self.getLeftEdge() <= other.getRightEdge() and
             self.getBottomEdge() >= other.getTopEdge() and
             self.getTopEdge() <= other.getBottomEdge();
-        // const xOverlap = self.position.x < other.position.x + other.width and
-        //     self.position.x + self.width > other.position.x;
-        // const yOverlap = self.position.y < other.position.y + other.height and
-        //     self.position.y + self.height > other.position.y;
-        // return xOverlap and yOverlap;
     }
     pub fn draw(self: Self) void {
         rayLib.drawRectangle(
-            @as(i32, @intFromFloat(self.position.x)),
-            @as(i32, @intFromFloat(self.position.y)),
-            @as(i32, @intFromFloat(self.width)),
-            @as(i32, @intFromFloat(self.height)),
+            @as(i32, @intFromFloat(self.rect.x)),
+            @as(i32, @intFromFloat(self.rect.y)),
+            @as(i32, @intFromFloat(self.rect.width)),
+            @as(i32, @intFromFloat(self.rect.height)),
             self.color,
         );
+    }
+    pub fn getHeight(self: Self) f32 {
+        return self.rect.height;
+    }
+    pub fn getWidth(self: Self) f32 {
+        return self.rect.width;
+    }
+    pub fn getPosition(self: Self) rayLib.Vector2 {
+        return rayLib.Vector2.init(self.rect.x, self.rect.y);
+    }
+    pub fn setPosition(self: *Self, pos: POSITION, value: f32) void {
+        if (pos == .X) {
+            self.rect.x = value;
+        } else {
+            self.rect.y = value;
+        }
+    }
+    pub fn addPosition(self: *Self, pos: POSITION, value: f32) void {
+        if (pos == .X) {
+            self.rect.x += value;
+        } else {
+            self.rect.y += value;
+        }
+    }
+    pub fn subtractPosition(self: *Self, pos: POSITION, value: f32) void {
+        if (pos == .X) {
+            self.rect.x -= value;
+        } else {
+            self.rect.y -= value;
+        }
+    }
+    pub fn setWidth(self: *Self, value: f32) void {
+        self.rect.width = value;
+    }
+    pub fn setHeight(self: *Self, value: f32) void {
+        self.rect.height = value;
     }
     ///This is the bottom edge of the platform
     ///
@@ -52,14 +120,17 @@ pub const Rectangle = struct {
     ///
     /// This is the bottom of the rectangle
     pub fn getBottomEdge(self: Self) f32 {
-        return self.position.y + self.height;
+        return self.rect.y + self.rect.height;
     }
     ///This is the top of the rectangle or the acual surface where the player can walk on position Y
     pub fn getTopEdge(self: Self) f32 {
-        return self.position.y;
+        return self.rect.y;
     }
-    pub fn getCenter(self: Self) f32 {
-        self.position.y + (self.height / 2);
+    pub fn getCenterY(self: Self) f32 {
+        return self.getPosition().y + (self.rect.height / 2);
+    }
+    pub fn getCenterX(self: Self) f32 {
+        return self.getPosition().x + (self.getWidth() / 2.0);
     }
     ///This gets the horizontal line of the platform
     ///
@@ -71,10 +142,50 @@ pub const Rectangle = struct {
     ///
     ///Anything with an X-coordinate greater than 500 has moved past the platform.
     pub fn getRightEdge(self: Self) f32 {
-        return self.position.x + self.width;
+        return self.rect.x + self.rect.width;
     }
     ///This retuns the left side of the rectangle position X
     pub fn getLeftEdge(self: Self) f32 {
-        return self.position.x;
+        return self.rect.x;
+    }
+    fn setDamageAmount(_: *Self) void {
+        //     switch (self.objectType) {
+        //         // Use the capture syntax |value| to get the data inside
+        //         .PLAYER => |player_id| {
+        //             // player_id is the u2
+        //             std.debug.print("Interacting with Player ID: {d}\n", .{player_id});
+        //         },
+        //         .PLATFORM => |plat_type| {
+        //             // plat_type is the PLATFORM_TYPES enum
+        //             switch (plat_type) {
+        //                 .GROUND => std.debug.print("Hit the ground\n", .{}),
+        //                 .ICE => self.damage = DamageHandler.init(true, 10.0, true),
+        //                 .VERTICAL => {},
+        //                 .SLIPPERY => {},
+        //                 .WATER => self.damage = DamageHandler.init(true, 10.0, true),
+        //                 .GRASS => {},
+        //                 .WALL => self.effects = ObjectEffects.init(true, 10.0, false, false, false),
+        //                 else => {},
+        //             }
+        //         },
+        //         .ENEMY => |enemy_type| {
+        //             switch (enemy_type) {
+        //                 .LOW => {},
+        //                 .MED => {},
+        //                 .HIGH => {},
+        //                 .BOSS => {},
+        //             }
+        //         },
+        //         .LEVEL => |level_idx| {
+        //             switch (level_idx) {
+        //                 .STANDARD => {},
+        //                 .MINI_BOSS => {},
+        //                 .BOSS => {},
+        //             }
+        //         },
+        //         else => |payload| {
+        //             std.debug.print("Other interaction: {any}\n", .{payload});
+        //         },
+        //     }
     }
 };
