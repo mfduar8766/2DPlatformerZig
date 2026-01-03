@@ -69,6 +69,7 @@ pub const PLATFORM_TYPES = enum(u8) {
     WATER = 3,
     ICE = 4,
     GRASS = 5,
+    WALL = 6,
 };
 
 pub const ENEMY_TYPES = enum(u8) {
@@ -95,7 +96,7 @@ pub const GAME_OBJECT_TYPES = union(enum) {
     ENEMY: ENEMY_TYPES, // Enemy can hold values from ENEMY_TYPE
     UI: UI_TYPES,
     CAMERA: u2,
-    LEVEL: usize,
+    LEVEL: LEVEL_TYPES,
     WORLD: u8,
 };
 

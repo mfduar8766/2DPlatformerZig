@@ -1,12 +1,50 @@
+const std = @import("std");
 const rayLib = @import("raylib");
 const GAME_OBJECT_TYPES = @import("../types.zig").GAME_OBJECT_TYPES;
 const POSITION = @import("../types.zig").POSITION;
+const PLATFORM = @import("../types.zig").PLATFORM_TYPES;
+
+pub const DamageHandler = struct {
+    const Self = @This();
+    dealDamage: bool = false,
+    damageAmount: f32 = 0,
+    damageOverTime: bool = false,
+
+    pub fn init(dealDamage: bool, damageAmount: f32, damageOverTime: bool) Self {
+        return .{
+            .dealDamage = dealDamage,
+            .damageAmount = damageAmount,
+            .damageOverTime = damageOverTime,
+        };
+    }
+};
+
+pub const ObjectEffects = struct {
+    const Self = @This();
+    bounce: bool = false,
+    bounceAmount: f32 = 0.0,
+    freze: bool = false,
+    instaKill: bool = false,
+    slippery: bool = false,
+
+    pub fn init(bounce: bool, bounceAmount: f32, freeze: bool, instaKill: bool, slippery: bool) Self {
+        return .{
+            .bounce = bounce,
+            .bounceAmount = bounceAmount,
+            .freeze = freeze,
+            .instaKill = instaKill,
+            .slippery = slippery,
+        };
+    }
+};
 
 pub const Rectangle = struct {
     const Self = @This();
     color: rayLib.Color,
     objectType: GAME_OBJECT_TYPES = GAME_OBJECT_TYPES{ .PLAYER = 0 },
     rect: rayLib.Rectangle,
+    damage: DamageHandler = undefined,
+    effects: ObjectEffects = undefined,
 
     pub fn init(
         objectType: GAME_OBJECT_TYPES,
@@ -15,11 +53,13 @@ pub const Rectangle = struct {
         position: rayLib.Vector2,
         color: rayLib.Color,
     ) Self {
-        return .{
+        var self = Self{
             .color = color,
             .objectType = objectType,
             .rect = rayLib.Rectangle.init(position.x, position.y, width, height),
         };
+        self.setDamageAmount();
+        return self;
     }
     pub fn intersects(self: Self, other: Rectangle) bool {
         return self.getRightEdge() >= other.getLeftEdge() and
@@ -86,8 +126,11 @@ pub const Rectangle = struct {
     pub fn getTopEdge(self: Self) f32 {
         return self.rect.y;
     }
-    pub fn getCenter(self: Self) f32 {
-        self.rect.y + (self.rect.height / 2);
+    pub fn getCenterY(self: Self) f32 {
+        return self.getPosition().y + (self.rect.height / 2);
+    }
+    pub fn getCenterX(self: Self) f32 {
+        return self.getPosition().x + (self.getWidth() / 2.0);
     }
     ///This gets the horizontal line of the platform
     ///
@@ -104,5 +147,45 @@ pub const Rectangle = struct {
     ///This retuns the left side of the rectangle position X
     pub fn getLeftEdge(self: Self) f32 {
         return self.rect.x;
+    }
+    fn setDamageAmount(_: *Self) void {
+        //     switch (self.objectType) {
+        //         // Use the capture syntax |value| to get the data inside
+        //         .PLAYER => |player_id| {
+        //             // player_id is the u2
+        //             std.debug.print("Interacting with Player ID: {d}\n", .{player_id});
+        //         },
+        //         .PLATFORM => |plat_type| {
+        //             // plat_type is the PLATFORM_TYPES enum
+        //             switch (plat_type) {
+        //                 .GROUND => std.debug.print("Hit the ground\n", .{}),
+        //                 .ICE => self.damage = DamageHandler.init(true, 10.0, true),
+        //                 .VERTICAL => {},
+        //                 .SLIPPERY => {},
+        //                 .WATER => self.damage = DamageHandler.init(true, 10.0, true),
+        //                 .GRASS => {},
+        //                 .WALL => self.effects = ObjectEffects.init(true, 10.0, false, false, false),
+        //                 else => {},
+        //             }
+        //         },
+        //         .ENEMY => |enemy_type| {
+        //             switch (enemy_type) {
+        //                 .LOW => {},
+        //                 .MED => {},
+        //                 .HIGH => {},
+        //                 .BOSS => {},
+        //             }
+        //         },
+        //         .LEVEL => |level_idx| {
+        //             switch (level_idx) {
+        //                 .STANDARD => {},
+        //                 .MINI_BOSS => {},
+        //                 .BOSS => {},
+        //             }
+        //         },
+        //         else => |payload| {
+        //             std.debug.print("Other interaction: {any}\n", .{payload});
+        //         },
+        //     }
     }
 };

@@ -6,13 +6,9 @@ const Rectangle = @import("../common/shapes.zig").Rectangle;
 const GAME_OBJECT_TYPES = @import("../types.zig").GAME_OBJECT_TYPES;
 const Enemy = @import("./enemies.zig").Enemy;
 const PLATFORM_TYPES = @import("../types.zig").PLATFORM_TYPES;
-const Levels = @import("./levels.zig").Levels;
-const createLevel0 = @import("./levels.zig").createLevel0;
-const createLevel1 = @import("./levels.zig").createLevel1;
 const GRAVITY = @import("../types.zig").GRAVITY;
 const PLAYER_STATE = @import("../types.zig").PLAYER_STATE;
 const Utils = @import("../utils/utils.zig");
-const CreateLevels = @import("levels.zig").CreateLevels;
 const World = @import("./levels.zig").World;
 
 pub const Config = struct {
@@ -67,12 +63,8 @@ pub const Game = struct {
     player: *Player = undefined,
     widgets: Widgets = undefined,
     currentLevel: usize = 0,
-    levelsList: [totalLevels]*Levels = undefined,
     isGameOver: bool = false,
     currentTime: f64 = 0.0,
-    //const worldBounds = rayLib.Rectangle.init(0, 0, 3000.0, screenH);
-    worldSize: Rectangle = undefined,
-    levels2: *CreateLevels(totalLevels) = undefined,
     world: *World(totalLevels) = undefined,
 
     pub fn init(allocator: std.mem.Allocator) !*Self {
@@ -81,23 +73,11 @@ pub const Game = struct {
         gamePtr.* = Self{
             .allocator = allocator,
             .config = &config,
-            // .player = try Player.init(allocator, &config),
-            // .widgets = Widgets.init(),
         };
-        // try gamePtr.createLevels();
         return gamePtr;
     }
     pub fn deinit(self: *Self) void {
-        // for (self.levelsList) |level| {
-        //     level.deinit();
-        // }
-        // for (self.levels2.levels) |value| {
-        //     value.deinit();
-        // }
-        // self.levels2.deinit();
         self.world.deinit();
-        self.allocator.destroy(self.world);
-        // self.allocator.destroy(self.levels2);
         self.player.deinit();
         self.allocator.destroy(self);
     }
@@ -127,12 +107,17 @@ pub const Game = struct {
             }
 
             const currentLevelObj = self.world.levels[self.currentLevel];
-            const playerRect = self.player.getRect();
-            const playerCenterX = playerRect.getPosition().x + (playerRect.getWidth() / 2.0);
+            const playerCenterX = self.player.getRect().getCenterX();
 
             // --- 1. UPDATE PHASE (Movement & Level Switching) ---
             // Pass the level bounds for horizontal clamping/walls
-            self.player.handleMovement(dt, self.worldSize);
+            // std.debug.print("level: {d} playerCenterX: {d} LEFT: {d} RIGHT: {d}\n", .{
+            //     self.currentLevel,
+            //     playerCenterX,
+            //     self.world.levels[self.currentLevel].getRect().getLeftEdge(),
+            //     self.world.levels[self.currentLevel].getRect().getRightEdge(),
+            // });
+            self.player.handleMovement(dt, self.world.getRect());
 
             // Seamless Level Switching based on Player Center
             if (playerCenterX > currentLevelObj.getRect().getRightEdge()) {
@@ -216,57 +201,14 @@ pub const Game = struct {
         }
     }
     fn createGameObjects(self: *Self) !void {
-        self.widgets = Widgets.init();
-        try self.createLevels();
-        self.player = try Player.init(self.allocator, self.config);
-
-        // const l = try CreateLevels(totalLevels).init(self.allocator);
-        // defer l.deinit();
-    }
-    fn createLevels(self: *Self) !void {
-        // const level0 = try Levels.init(
-        //     self.allocator,
-        //     try createLevel0(self.allocator, 7),
-        //     Rectangle.init(
-        //         .{ .LEVEL = 0 },
-        //         1500.0,
-        //         Utils.floatFromInt(f32, rayLib.getScreenHeight()),
-        //         rayLib.Vector2.init(0.0, 0.0),
-        //         rayLib.Color.init(0, 0, 0, 0),
-        //     ),
-        // );
-        // const level1 = try Levels.init(
-        //     self.allocator,
-        //     try createLevel1(self.allocator, level0.staticPlatforms[level0.staticPlatforms.len - 1].rect, 3),
-        //     Rectangle.init(
-        //         .{ .LEVEL = 1 },
-        //         1500.0,
-        //         Utils.floatFromInt(f32, rayLib.getScreenHeight()),
-        //         rayLib.Vector2.init(level0.getRect().getRightEdge() + 1, 0.0),
-        //         rayLib.Color.init(0, 0, 0, 0),
-        //     ),
-        // );
-        // const levels = [totalLevels]*Levels{ level0, level1 };
-        // self.levelsList = levels;
-
-        // self.levels2 = try CreateLevels(totalLevels).init(self.allocator);
         self.world = try World(totalLevels).init(self.allocator);
-        // var worldSize: f32 = 0;
-        // for (self.levels2.levels) |value| {
-        //     worldSize += value.getRect().getWidth();
-        // }
-        self.worldSize = Rectangle.init(
-            .{ .WORLD = 0 },
-            self.world.worldSize,
-            Utils.floatFromInt(f32, rayLib.getScreenHeight()),
-            rayLib.Vector2.init(0, 0),
-            rayLib.Color.init(0, 0, 0, 0),
-        );
+        self.widgets = Widgets.init();
+        self.player = try Player.init(self.allocator, self.config);
     }
     fn checkForIntersection(self: *Self, dt: f32, platform: Platform) void {
-        if (self.player.rect.intersects(platform.rect)) {
+        if (self.player.getRect().intersects(platform.getRect())) {
             // CASE: Falling onto a platform (Landing)
-            if (self.player.velocityY > 0) {
+            if (self.player.getVelocity(.Y) > 0) {
                 // Only land if we are actually above the platform's surface
                 // This prevents "teleporting" to the top if we hit the side
                 if (self.player.rect.getPosition().y < platform.rect.getTopEdge()) {
@@ -284,12 +226,25 @@ pub const Game = struct {
                     self.player.setVelocity(.Y, 0.0);
                     self.player.startFalling(dt);
                 }
+            } else if (self.player.getVelocity(.X) > 0) {
+                // std.debug.print("INTERSECTS playerLEdge: {d} platformLEdge: {d} playerREdge: {d} platformREdge: {d} playerTop: {d} platformTop: {d}\n", .{
+                //     self.player.getRect().getLeftEdge(),
+                //     platform.getRect().getLeftEdge(),
+                //     self.player.getRect().getRightEdge(),
+                //     platform.getRect().getRightEdge(),
+                //     self.player.getRect().getTopEdge(),
+                //     platform.getRect().getTopEdge(),
+                // });
+                if (self.player.getRect().getRightEdge() >= platform.getRect().getLeftEdge()) {
+                    std.debug.print("DAMAGE\n", .{});
+                    // self.player.applyDamageBounce(dt, .X);
+                }
             }
 
             // Damage Logic
-            if (platform.dealDamage) {
-                self.handleDamage(dt, platform.damageOverTime, platform.damageAmount);
-            }
+            // if (platform.dealDamage) {
+            //     self.handleDamage(dt, platform.damageOverTime, platform.damageAmount);
+            // }
         } else {
             // 2. If NOT intersecting, check if we just walked off an edge
             // If the player thinks they are grounded, but they are no longer
@@ -299,6 +254,23 @@ pub const Game = struct {
                 // Just let gravity take over in the next frame.
                 self.player.startFalling(dt);
             }
+        }
+    }
+    fn handleDamage(self: *Self, dt: f32, damageOverTime: bool, damageAmount: f32) void {
+        if (self.currentTime == 0.0) {
+            self.currentTime = rayLib.getTime();
+            self.player.setDamage(damageAmount);
+            self.widgets.healthBarRect.setWidth(self.player.getHealth());
+            self.player.applyDamageBounce(dt);
+        }
+        const elapsedTime = rayLib.getTime() - self.currentTime;
+        if (damageOverTime and elapsedTime > 1.0) {
+            self.player.setDamage(damageAmount);
+            self.widgets.healthBarRect.setWidth(self.player.getHealth());
+            self.player.applyDamageBounce(dt);
+        }
+        if (self.player.health < 0) {
+            self.handleGameOver();
         }
     }
     ///Check if the player is horizontally overlapping the platform
@@ -346,23 +318,6 @@ pub const Game = struct {
     }
     fn collidedWithTop(self: Self, platform: Platform) bool {
         return self.player.rect.getBottomEdge() >= platform.rect.getTopEdge();
-    }
-    fn handleDamage(self: *Self, dt: f32, damageOverTime: bool, damageAmount: f32) void {
-        if (self.currentTime == 0.0) {
-            self.currentTime = rayLib.getTime();
-            self.player.setDamage(damageAmount);
-            self.widgets.healthBarRect.setWidth(self.player.getHealth());
-            self.player.applyDamageBounce(dt);
-        }
-        const elapsedTime = rayLib.getTime() - self.currentTime;
-        if (damageOverTime and elapsedTime > 1.0) {
-            self.player.setDamage(damageAmount);
-            self.widgets.healthBarRect.setWidth(self.player.getHealth());
-            self.player.applyDamageBounce(dt);
-        }
-        if (self.player.health < 0) {
-            self.handleGameOver();
-        }
     }
     fn resetGameState(self: *Self) void {
         self.isGameOver = false;
