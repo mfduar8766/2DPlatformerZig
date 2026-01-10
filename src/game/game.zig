@@ -101,44 +101,8 @@ pub const Game = struct {
             .zoom = 2.0, // impacts how much of the world if visible. Since my world is 32x32 a zoom of 1 is to much
         };
         while (!rayLib.windowShouldClose()) {
-            rayLib.beginDrawing();
-            rayLib.clearBackground(.black);
-            rayLib.endDrawing();
-
             const dt = rayLib.getFrameTime();
-            const playerCenterX = self.player.getRect().getCenterX();
-            // 1. Calculate which level the player IS IN right now
-            const detected_idx = Utils.intFromFloat(usize, playerCenterX / self.world.getLevelWidth());
-            // 2. Safety check: Don't try to load Level 5 if you only have 2 levels
-            const safe_idx = @min(detected_idx, totalLevels - 1);
-
-            //UPDATE LOGIC
-            self.player.handleMovement(dt, self.world.getRect());
-
-            //CHECK FOR COLLISIONS
-            if (safe_idx == self.world.getLevelIndex()) {
-                const rect = self.player.getRect();
-                const p_x = rect.getPosition().x;
-                const p_y = rect.getPosition().y;
-                const p_w = rect.getWidth();
-                const p_h = rect.getHeight();
-                // Check points at the player's feet
-                const bottomLeft = self.world.getTilesAt(p_x + 2, p_y + p_h);
-                const bottomRight = self.world.getTilesAt(p_x + p_w - 2, p_y + p_h);
-                if (bottomLeft != 0 or bottomRight != 0) {
-                    // std.debug.print("CCCCCCC {any} {any} {any}\n", .{ bottomLeft, bottomRight, right });
-                    // We hit something!
-                    // If ID is 1 (Ground), stop falling.
-                    // If ID is 4 (Spikes), take damage.
-                }
-            }
-
-            //LEVEL TRANSITION
-            if (safe_idx != self.world.getLevelIndex()) {
-                std.debug.print("Crossing into Level {d}!\n", .{safe_idx});
-                try self.world.loadLevel(safe_idx);
-            }
-
+            try self.update(dt);
             //CAMERA
             // camera.target.x += (self.player.getRect().getPosition().x - camera.target.x) * lerpFactor * dt;
             // camera.target.y += (self.player.getRect().getPosition().y - camera.target.y) * lerpFactor * dt;
@@ -279,6 +243,33 @@ pub const Game = struct {
         self.widgets = Widgets.init();
         self.player = try Player.init(self.allocator, self.config);
         self.world = try World2(totalLevels, 0).init(self.allocator);
+    }
+    fn update(self: *Self, dt: f32) !void {
+        self.player.handleMovement(dt, self.world.getRect());
+        const playerCenterX = self.player.getRect().getCenterX();
+        const currentPlayerLocation = Utils.intFromFloat(usize, playerCenterX / self.world.getLevelWidth());
+        const newLevelIndex = @min(currentPlayerLocation, totalLevels - 1);
+        if (newLevelIndex != self.world.getLevelIndex()) {
+            std.debug.print("Moving to level: {d}\n", .{newLevelIndex});
+            try self.world.loadLevel(newLevelIndex);
+        }
+        //CHECK FOR COLLISIONS
+        // if (safe_idx == self.world.getLevelIndex()) {
+        //     const rect = self.player.getRect();
+        //     const p_x = rect.getPosition().x;
+        //     const p_y = rect.getPosition().y;
+        //     const p_w = rect.getWidth();
+        //     const p_h = rect.getHeight();
+        //     // Check points at the player's feet
+        //     const bottomLeft = self.world.getTilesAt(p_x + 2, p_y + p_h);
+        //     const bottomRight = self.world.getTilesAt(p_x + p_w - 2, p_y + p_h);
+        //     if (bottomLeft != 0 or bottomRight != 0) {
+        //         // std.debug.print("CCCCCCC {any} {any} {any}\n", .{ bottomLeft, bottomRight, right });
+        //         // We hit something!
+        //         // If ID is 1 (Ground), stop falling.
+        //         // If ID is 4 (Spikes), take damage.
+        //     }
+        // }
     }
     fn checkForIntersection(self: *Self, dt: f32, otherRect: Platform) void {
         const intersector = otherRect.getRect();

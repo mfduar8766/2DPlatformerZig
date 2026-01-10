@@ -565,31 +565,21 @@ pub fn World2(comptime totalLevels: usize, currentLevel: usize) type {
             self.currentLevelIndex = levelIndex;
             self.enemies.clearRetainingCapacity();
             self.dynamicPlatforms.clearRetainingCapacity();
-            // const blueprint = BLUEPRINTS[levelIndex];
-            // for (0..ROWS) |y| {
-            //     for (0..COLUMNS_PER_LEVEL) |x| {
-            //         const char = blueprint[y][x];
-            //         // 2. Use COLUMNS_PER_LEVEL for indexing here!
-            //         const idx = y * COLUMNS_PER_LEVEL + x;
-            //         self.activeMap[idx] = charToId(char);
-            //         //TODO: FIGURE OUT HOW TO SET PLAYER PROPERLY
-            //         // if (char == 'P' and self.currentLevelIndex == 0) {
-            //         //     // Global spawn logic
-            //         //     const global_x_offset = @as(f32, @floatFromInt(levelIndex * LEVEL_WIDTH));
-            //         //     const spawn_x = (@as(f32, @floatFromInt(x)) * @as(f32, @floatFromInt(TILE_SIZE))) + global_x_offset;
-            //         //     const spawn_y = @as(f32, @floatFromInt(y)) * @as(f32, @floatFromInt(TILE_SIZE));
-            //         //     self.player.getRect().setPosition(.X, spawn_x);
-            //         //     self.player.getRect().setPosition(.Y, spawn_y);
-            //         // }
-            //     }
-            // }
-            //This sets the activeMap by getting the currentLevelIndex and mapping it to the bluePrints 2d array
             const currentLevelBluePrint = BLUEPRINTS[levelIndex];
-            for (0..ROWS) |rows| {
-                for (0..COLUMNS_PER_LEVEL) |cols| {
-                    const char = currentLevelBluePrint[rows][cols];
-                    const index = rows * COLUMNS_PER_LEVEL + cols;
-                    self.activeMap[index] = charToId(char);
+            for (0..ROWS) |row| {
+                for (0..COLUMNS_PER_LEVEL) |col| {
+                    const gridCharacterLocation = currentLevelBluePrint[row][col];
+                    const index = row * COLUMNS_PER_LEVEL + col;
+                    self.activeMap[index] = charToId(gridCharacterLocation);
+                    //TODO: FIGURE OUT HOW TO RESET PLAYER RESPAWN
+                    // if (char == 'P' and self.currentLevelIndex == 0) {
+                    //     // Global spawn logic
+                    //     const global_x_offset = @as(f32, @floatFromInt(levelIndex * LEVEL_WIDTH));
+                    //     const spawn_x = (@as(f32, @floatFromInt(x)) * @as(f32, @floatFromInt(TILE_SIZE))) + global_x_offset;
+                    //     const spawn_y = @as(f32, @floatFromInt(y)) * @as(f32, @floatFromInt(TILE_SIZE));
+                    //     self.player.getRect().setPosition(.X, spawn_x);
+                    //     self.player.getRect().setPosition(.Y, spawn_y);
+                    // }
                 }
             }
         }
