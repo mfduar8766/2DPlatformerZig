@@ -57,9 +57,11 @@ pub const FileExtensions = enum(u8) {
     }
 };
 
-pub const MOVE = enum(u2) {
+pub const DIRECTION = enum(u8) {
     LEFT = 0,
     RIGHT = 1,
+    UP = 2,
+    DOWN = 3,
 };
 
 pub const PLATFORM_TYPES = enum(u8) {
@@ -120,4 +122,10 @@ pub const VELOCITY = enum(u2) {
 pub const POSITION = enum(u2) {
     X = 0,
     Y = 1,
+};
+
+pub const COLLISION_TYPES = enum(u8) {
+    HEAD_BUMP = 0,
+    FALLING = 1,
+    WALL = 3,
 };

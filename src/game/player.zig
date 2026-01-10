@@ -2,12 +2,13 @@ const std = @import("std");
 const rayLib = @import("raylib");
 const Rectangle = @import("../common/shapes.zig").Rectangle;
 const GAME_OBJECT_TYPES = @import("../types.zig").GAME_OBJECT_TYPES;
-const MOVE = @import("../types.zig").MOVE;
+const DIRECTION = @import("../types.zig").DIRECTION;
 const GRAVITY = @import("../types.zig").GRAVITY;
 const PLAYER_STATE = @import("../types.zig").PLAYER_STATE;
 const VELOCITY = @import("../types.zig").VELOCITY;
 const Utils = @import("../utils/utils.zig");
 const Config = @import("./game.zig").Config;
+const POSITION = @import("../types.zig").POSITION;
 
 pub const Player = struct {
     const Self = @This();
@@ -30,6 +31,7 @@ pub const Player = struct {
     onGround: bool = true,
     isFalling: bool = false,
     config: *Config,
+    canDoubleJump: bool = false,
 
     pub fn init(allocator: std.mem.Allocator, config: *Config) !*Self {
         const playerPtr = try allocator.create(Self);
@@ -37,11 +39,11 @@ pub const Player = struct {
             .allocator = allocator,
             .rect = Rectangle.init(
                 GAME_OBJECT_TYPES{ .PLAYER = 0 },
-                50.0,
-                50.0,
+                32.0,
+                32.0,
                 rayLib.Vector2.init(
                     0.0,
-                    Utils.floatFromInt(f32, rayLib.getScreenHeight()) - 50.0,
+                    544,
                 ),
                 .red,
             ),
@@ -52,21 +54,24 @@ pub const Player = struct {
     pub fn deinit(self: *Self) void {
         self.allocator.destroy(self);
     }
-    pub fn getRect(self: Self) Rectangle {
-        return self.rect;
+    ///If you dont do *Self and return self.rect you are returning a new copy of the rectangle instead of the current data
+    ///
+    /// Only do fuc getRect(self: Self) Rectangle if you are not going to mutate the returned value
+    pub fn getRect(self: *Self) *Rectangle {
+        return &self.rect;
     }
-    pub fn handleMovement(self: *Self, dt: f32, levelBounds: Rectangle) void {
+    pub fn handleMovement(self: *Self, dt: f32, worldBounds: Rectangle) void {
         if (self.velocityX > 0 and (!rayLib.isKeyDown(.d) or !rayLib.isKeyDown(.a))) {
             self.velocityX = 0.0;
         }
         if (rayLib.isKeyDown(.d)) {
             self.velocityX = self.spped;
             self.rect.addPosition(.X, self.velocityX * self.speedMultiplier * dt);
-            self.checkBounds(MOVE.RIGHT, levelBounds);
+            self.checkBounds(DIRECTION.RIGHT, worldBounds);
         } else if (rayLib.isKeyDown(.a)) {
             self.velocityX = self.spped;
             self.rect.subtractPosition(.X, self.velocityX * self.speedMultiplier * dt);
-            self.checkBounds(MOVE.LEFT, levelBounds);
+            self.checkBounds(DIRECTION.LEFT, worldBounds);
         }
 
         if (rayLib.isKeyPressed(rayLib.KeyboardKey.w) and self.onGround) {
@@ -126,12 +131,25 @@ pub const Player = struct {
         }
         return self.velocityY;
     }
-    pub fn applyDamageBounce(self: *Self, dt: f32) void {
-        self.velocityY = self.damageBounce;
-        self.velocityY += GRAVITY * dt;
-        self.rect.addPosition(.Y, self.velocityY * dt);
-        self.rect.subtractPosition(.X, self.velocityX * dt);
-        self.onGround = false;
+    pub fn applyDamage(self: *Self, dt: f32, position: POSITION, otherRect: Rectangle) void {
+        // self.velocityY = self.damageBounce;
+        // self.velocityY += GRAVITY * dt;
+        // self.rect.addPosition(.Y, self.velocityY * dt);
+        // self.rect.subtractPosition(.X, self.velocityX * dt);
+        // self.onGround = false;
+
+        const damage = otherRect.damage.damageAmount;
+        const effects = otherRect.effects;
+        self.setDamage(damage);
+        if (effects.bounce) {
+            if (position == .X) {} else {
+                self.velocityY = if (Utils.isNegativeNumber(effects.bounceAmount)) effects.bounceAmount else Utils.convertSigns(.POSITIVE, effects.bounceAmount);
+                self.velocityY += GRAVITY * dt;
+                self.rect.addPosition(.Y, self.velocityY * dt);
+                self.rect.subtractPosition(.X, self.velocityX * dt);
+                self.onGround = false;
+            }
+        } else if (effects.freeze) {} else if (effects.instaKill) {} else if (effects.slippery) {}
     }
     pub fn startFalling(self: *Self, dt: f32) void {
         self.onGround = false;
@@ -149,33 +167,34 @@ pub const Player = struct {
         self.rect.setPosition(.X, 0.0);
         self.rect.setPosition(.Y, @as(f32, @floatFromInt(rayLib.getScreenHeight())) - 80.0);
     }
-    // fn checkBounds(self: *Self, move: MOVE, levelBounds: Rectangle) void {
+    // fn checkBounds(self: *Self, move: DIRECTION, levelBounds: Rectangle) void {
     //     switch (move) {
-    //         MOVE.LEFT => {
+    //         DIRECTION.LEFT => {
     //             if (self.rect.getPosition().x < 0) {
     //                 self.rect.setPosition(.X, 0.0);
     //             }
     //         },
-    //         MOVE.RIGHT => {
+    //         DIRECTION.RIGHT => {
     //             if (self.rect.getRightEdge() >= levelBounds.getRightEdge()) {
     //                 self.rect.setPosition(.X, (levelBounds.getPosition().x + levelBounds.getWidth()) - self.rect.getWidth());
     //             }
     //         },
     //     }
     // }
-    fn checkBounds(self: *Self, move: MOVE, worldBounds: Rectangle) void {
+    fn checkBounds(self: *Self, move: DIRECTION, worldBounds: Rectangle) void {
         switch (move) {
-            MOVE.LEFT => {
+            DIRECTION.LEFT => {
                 // Stop at the absolute beginning of Level 0
                 if (self.rect.getPosition().x < worldBounds.getPosition().x) {
                     self.rect.setPosition(.X, worldBounds.getPosition().x);
                 }
             },
-            MOVE.RIGHT => {
+            DIRECTION.RIGHT => {
                 if (self.rect.getRightEdge() >= worldBounds.getRightEdge()) {
                     self.rect.setPosition(.X, worldBounds.getRightEdge() - self.getRect().getWidth());
                 }
             },
+            else => {},
         }
     }
 };

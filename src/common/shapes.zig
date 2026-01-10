@@ -23,7 +23,7 @@ pub const ObjectEffects = struct {
     const Self = @This();
     bounce: bool = false,
     bounceAmount: f32 = 0.0,
-    freze: bool = false,
+    freeze: bool = false,
     instaKill: bool = false,
     slippery: bool = false,
 
@@ -148,44 +148,41 @@ pub const Rectangle = struct {
     pub fn getLeftEdge(self: Self) f32 {
         return self.rect.x;
     }
-    fn setDamageAmount(_: *Self) void {
-        //     switch (self.objectType) {
-        //         // Use the capture syntax |value| to get the data inside
-        //         .PLAYER => |player_id| {
-        //             // player_id is the u2
-        //             std.debug.print("Interacting with Player ID: {d}\n", .{player_id});
-        //         },
-        //         .PLATFORM => |plat_type| {
-        //             // plat_type is the PLATFORM_TYPES enum
-        //             switch (plat_type) {
-        //                 .GROUND => std.debug.print("Hit the ground\n", .{}),
-        //                 .ICE => self.damage = DamageHandler.init(true, 10.0, true),
-        //                 .VERTICAL => {},
-        //                 .SLIPPERY => {},
-        //                 .WATER => self.damage = DamageHandler.init(true, 10.0, true),
-        //                 .GRASS => {},
-        //                 .WALL => self.effects = ObjectEffects.init(true, 10.0, false, false, false),
-        //                 else => {},
-        //             }
-        //         },
-        //         .ENEMY => |enemy_type| {
-        //             switch (enemy_type) {
-        //                 .LOW => {},
-        //                 .MED => {},
-        //                 .HIGH => {},
-        //                 .BOSS => {},
-        //             }
-        //         },
-        //         .LEVEL => |level_idx| {
-        //             switch (level_idx) {
-        //                 .STANDARD => {},
-        //                 .MINI_BOSS => {},
-        //                 .BOSS => {},
-        //             }
-        //         },
-        //         else => |payload| {
-        //             std.debug.print("Other interaction: {any}\n", .{payload});
-        //         },
-        //     }
+    fn setDamageAmount(self: *Self) void {
+        switch (self.objectType) {
+            // Use the capture syntax |value| to get the data inside
+            .PLATFORM => |plat_type| {
+                switch (plat_type) {
+                    .GROUND => {
+                        self.damage = DamageHandler.init(true, 10.0, false);
+                    },
+                    .ICE => self.damage = DamageHandler.init(true, 10.0, true),
+                    .VERTICAL => {},
+                    .SLIPPERY => {},
+                    .WATER => {
+                        self.damage = DamageHandler.init(true, 10.0, true);
+                        self.effects = ObjectEffects.init(true, 10.0, false, false, false);
+                    },
+                    .GRASS => {},
+                    .WALL => self.effects = ObjectEffects.init(true, 10.0, false, false, false),
+                }
+            },
+            .ENEMY => |enemy_type| {
+                switch (enemy_type) {
+                    .LOW => {},
+                    .MED => {},
+                    .HIGH => {},
+                    .BOSS => {},
+                }
+            },
+            .LEVEL => |level_idx| {
+                switch (level_idx) {
+                    .STANDARD => {},
+                    .MINI_BOSS => {},
+                    .BOSS => {},
+                }
+            },
+            else => |_| {},
+        }
     }
 };
