@@ -15,7 +15,7 @@ pub const Player = struct {
     const Self = @This();
     allocator: std.mem.Allocator,
     rect: Rectangle,
-    jumpHeight: f32 = -100.0,
+    jumpHeight: f32 = -120.0,
     speedMultiplier: f32 = 2.0,
     jumpMultiplier: f32 = 2.0,
     fallingSpeed: f32 = 100.0,
@@ -133,7 +133,7 @@ pub const Player = struct {
         }
         return self.velocityY;
     }
-    pub fn applyDamage(self: *Self, dt: f32, position: POSITION, properties: ObjectProperties) void {
+    pub fn applyDamage(self: *Self, dt: f32, position: POSITION, properties: *const ObjectProperties) void {
         const damage = if (properties.damage != null) properties.damage.?.damageAmount else 0.0;
         self.setDamage(damage);
         if (properties.bounce) {
@@ -150,11 +150,10 @@ pub const Player = struct {
     }
     pub fn startFalling(self: *Self, dt: f32) void {
         self.onGround = false;
+        self.isFalling = true;
         self.velocityY = self.fallingSpeed;
         self.velocityY += GRAVITY * dt;
         self.rect.addPosition(.Y, self.velocityY * dt);
-        self.isFalling = true;
-        self.onGround = false;
     }
     pub fn reset(self: *Self) void {
         self.velocityX = 0.0;

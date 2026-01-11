@@ -122,27 +122,120 @@ pub const Game = struct {
             std.debug.print("Moving to next level at index: {d}\n", .{nextLevelIndex});
             try self.world.loadLevel(nextLevelIndex);
         }
-        //CHECK FOR COLLISIONS
         if (nextLevelIndex == self.world.getLevelIndex()) {
             self.checkForCollisions(dt);
         }
-        // if (safe_idx == self.world.getLevelIndex()) {
-        // const rect = self.player.getRect();
-        // const p_x = rect.getPosition().x;
-        // const p_y = rect.getPosition().y;
-        // const p_w = rect.getWidth();
-        // const p_h = rect.getHeight();
-        // // Check points at the player's feet
-        // const bottomLeft = self.world.getTilesAt(p_x + 2, p_y + p_h);
-        // const bottomRight = self.world.getTilesAt(p_x + p_w - 2, p_y + p_h);
-        // if (bottomLeft != 0 or bottomRight != 0) {
-        //     // std.debug.print("CCCCCCC {any} {any} {any}\n", .{ bottomLeft, bottomRight, right });
-        //     // We hit something!
-        //     // If ID is 1 (Ground), stop falling.
-        //     // If ID is 4 (Spikes), take damage.
-        // }
-        // }
     }
+    // fn checkForCollisions(self: *Self, dt: f32) void {
+    //     const rect = self.player.getRect();
+    //     const p_x = rect.getPosition().x;
+    //     const p_y = rect.getPosition().y;
+    //     const p_w = rect.getWidth();
+    //     const p_h = rect.getHeight();
+    //     const margin: f32 = 2.0;
+    //     const topLeft = self.world.getTilesAt(p_x + margin, p_y);
+    //     const topRight = self.world.getTilesAt(p_x + p_w - margin, p_y);
+
+    //     // --- FLOOR CHECK (Bottom edge) ---
+    //     // We check exactly at the feet (y + height)
+    //     const bottomLeft = self.world.getTilesAt(p_x + margin, p_y + p_h);
+    //     const bottomRight = self.world.getTilesAt(p_x + p_w - margin, p_y + p_h);
+
+    //     // --- WALL CHECKS (Sides) ---
+    //     const middleLeft = self.world.getTilesAt(p_x, p_y + (p_h / 2));
+    //     const middleRight = self.world.getTilesAt(p_x + p_w, p_y + (p_h / 2));
+
+    //     // std.debug.print("velY: {d}\n", .{self.player.getVelocity(.Y)});
+
+    //     //CASE: Falling and landing on any surface
+    //     if (self.player.getVelocity(.Y) > 0.0) {
+    //         std.debug.print("GREATER bottomL: {d} velY: {d}\n", .{ bottomLeft, self.player.getVelocity(.Y) });
+    //         if (bottomLeft == 1 and bottomRight == 1) {
+    //             const groundTopY = @floor(rect.getBottomEdge() / 32.0) * 32.0;
+    //             if (self.player.rect.getPosition().y <= groundTopY) {
+    //                 self.handleCollisionss2(
+    //                     dt,
+    //                     .FALLING,
+    //                     groundTopY,
+    //                     &self.world.getObjectProperties(1).?,
+    //                     .Y,
+    //                     null,
+    //                 );
+    //             }
+    //         } else if (bottomLeft == 2 and bottomRight == 2) {
+    //             const row = @as(f32, @floor(rect.getBottomEdge() / 32.0));
+    //             const gridY = row * 32.0;
+    //             const gridSurfaceY = gridY + 5.0;
+    //             if (rect.getBottomEdge() >= gridSurfaceY) {
+    //                 self.handleCollisionss2(
+    //                     dt,
+    //                     .FALLING,
+    //                     gridSurfaceY,
+    //                     &self.world.getObjectProperties(2).?,
+    //                     .Y,
+    //                     null,
+    //                 );
+    //             }
+    //         }
+    //     }
+    //     //CASE: Jumping up and hitting the bottom of any surface
+    //     else if (self.player.getVelocity(.Y) < 0 and 0 == self.player.getVelocity(.X) and topLeft == 5 and topRight == 5) {
+    //         std.debug.print("BUMP\n", .{});
+    //         const platformBottomY = @floor(rect.getTopEdge() / 32.0) * 32.0;
+    //         if (rect.getTopEdge() >= platformBottomY) {
+    //             self.handleCollisionss2(
+    //                 dt,
+    //                 .HEAD_BUMP,
+    //                 platformBottomY,
+    //                 &self.world.getObjectProperties(5).?,
+    //                 .Y,
+    //                 null,
+    //             );
+    //         }
+    //     } else if (self.player.getVelocity(.X) > 0) {
+    //         //CASE: Wall collisions
+    //         if (middleRight == 3) {
+    //             //
+    //         } else if (middleLeft == 3) {
+    //             //
+    //         }
+    //     } else if (self.player.getVelocity(.X) < 0) {
+    //         //
+    //     }
+    //     // CASE: falling from any surface
+    //     if (bottomLeft == 2 and bottomRight == 2) {
+    //         self.player.startFalling(dt);
+    //         const row = @as(f32, @floor(rect.getBottomEdge() / 32.0));
+    //         const gridY = row * 32.0;
+    //         const waterSurfaceY = gridY + 5.0;
+    //         if (rect.getBottomEdge() >= waterSurfaceY) {
+    //             self.handleCollisionss2(
+    //                 dt,
+    //                 .FALLING,
+    //                 waterSurfaceY,
+    //                 &self.world.getObjectProperties(2).?,
+    //                 .Y,
+    //                 null,
+    //             );
+    //         }
+    //     } else if (bottomLeft == 4 and bottomRight == 4) {
+    //         self.player.startFalling(dt);
+    //         const row = @as(f32, @floor(rect.getBottomEdge() / 32.0));
+    //         const gridY = row * 32.0;
+    //         const waterSurfaceY = gridY + 5.0;
+    //         if (rect.getBottomEdge() >= waterSurfaceY) {
+    //             self.player.startFalling(dt);
+    //             self.handleCollisionss2(
+    //                 dt,
+    //                 .FALLING,
+    //                 waterSurfaceY,
+    //                 &self.world.getObjectProperties(4).?,
+    //                 .Y,
+    //                 null,
+    //             );
+    //         }
+    //     }
+    // }
     fn checkForCollisions(self: *Self, dt: f32) void {
         const rect = self.player.getRect();
         const p_x = rect.getPosition().x;
@@ -150,97 +243,145 @@ pub const Game = struct {
         const p_w = rect.getWidth();
         const p_h = rect.getHeight();
         const margin: f32 = 2.0;
+
+        // 1. Get tile IDs at critical points
         const topLeft = self.world.getTilesAt(p_x + margin, p_y);
         const topRight = self.world.getTilesAt(p_x + p_w - margin, p_y);
-
-        // --- FLOOR CHECK (Bottom edge) ---
-        // We check exactly at the feet (y + height)
         const bottomLeft = self.world.getTilesAt(p_x + margin, p_y + p_h);
         const bottomRight = self.world.getTilesAt(p_x + p_w - margin, p_y + p_h);
+        // const middleLeft = self.world.getTilesAt(p_x, p_y + (p_h / 2));
+        // const middleRight = self.world.getTilesAt(p_x + p_w, p_y + (p_h / 2));
+        const vel_y = self.player.getVelocity(.Y);
+        // const vel_x = self.player.getVelocity(.X);
 
-        // --- WALL CHECKS (Sides) ---
-        const middleLeft = self.world.getTilesAt(p_x, p_y + (p_h / 2));
-        const middleRight = self.world.getTilesAt(p_x + p_w, p_y + (p_h / 2));
-
-        if (topLeft != 0 or topRight != 0 or bottomLeft != 0 or bottomRight != 0) {
-            //CASE: Falling and landing on any surface
-            if (self.player.getVelocity(.Y) > 0.0) {
-                std.debug.print("GREATER bottomL: {d} \n", .{bottomLeft});
-                if (bottomLeft == 1 and bottomRight == 1) {
-                    const groundTopY = @floor(rect.getBottomEdge() / 32.0) * 32.0;
-                    if (self.player.rect.getPosition().y <= groundTopY) {
-                        self.handleCollisionss2(
-                            dt,
-                            .FALLING,
-                            groundTopY,
-                            self.world.getObjectProperties(1).?,
-                            null,
-                        );
-                    }
-                }
-            }
-            //CASE: Jumping up and hitting the bottom of any surface
-            else if (self.player.getVelocity(.Y) < 0 and 0 == self.player.getVelocity(.X) and topLeft == 5 and topRight == 5) {
-                const platformBottomY = @floor(rect.getTopEdge() / 32.0) * 32.0;
-                if (rect.getTopEdge() >= platformBottomY) {
+        // --- VERTICAL COLLISIONS (Falling / Jumping) ---
+        if (vel_y >= 0.0) {
+            // Find the top edge of the tile grid row the feet are currently in
+            const gridY = @floor((p_y + p_h) / 32.0) * 32.0;
+            if (bottomLeft == 1 or bottomRight == 1) {
+                // GROUND: Standard collision at the grid line
+                if (rect.getBottomEdge() >= gridY) {
                     self.handleCollisionss2(
                         dt,
-                        .HEAD_BUMP,
-                        platformBottomY,
-                        self.world.getObjectProperties(5).?,
+                        .FALLING,
+                        gridY,
+                        &self.world.getObjectProperties(1).?,
+                        .Y,
                         null,
                     );
                 }
-            } else if (self.player.getVelocity(.X) > 0) {
-                //CASE: Wall collisions
-                if (middleRight == 3) {
-                    //
-                } else if (middleLeft == 3) {
-                    //
+            } else if (bottomLeft == 2 or bottomRight == 2 or bottomLeft == 4 or bottomRight == 4) {
+                self.player.startFalling(dt);
+                // WATER/SPIKES: Collision at the offset (+5px)
+                const waterSurfaceY = gridY + 5.0;
+                if (rect.getBottomEdge() >= waterSurfaceY) {
+                    const id = if (bottomLeft != 0) bottomLeft else bottomRight;
+                    self.handleCollisionss2(
+                        dt,
+                        .FALLING,
+                        waterSurfaceY,
+                        &self.world.getObjectProperties(id).?,
+                        .Y,
+                        null,
+                    );
+                } else {
+                    // IMPORTANT: We are inside the tile but haven't hit the water surface yet.
+                    // We must keep falling!
+                    self.player.setIsOnGround(false);
                 }
-                // CASE: falling from the ground
-                else if (bottomLeft == 2 and bottomRight == 2) {
-                    const gridY = @floor(rect.getBottomEdge() / 32.0) * 32.0;
-                    // 2. Add the 5px offset you used in drawTiles
-                    const waterSurfaceY = gridY - 5.0;
-                    // std.debug.print("playerY: {d} waterTopY: {d}\n", .{ p_y, gridElementTopY });
-                    if (rect.getBottomEdge() >= waterSurfaceY) {
-                        std.debug.print("PLAYER BOTTOM TOUCHED WATER gridY: {d} bottomL: {d}\n", .{ gridY, bottomLeft });
-                        self.player.startFalling(dt);
-                        self.handleCollisionss2(
-                            dt,
-                            .FALLING,
-                            waterSurfaceY,
-                            self.world.getObjectProperties(2).?,
-                            null,
-                        );
-                    }
-                } else if (bottomLeft == 4 and bottomRight == 4) {
-                    const gridY = @floor(rect.getBottomEdge() / 32.0) * 32.0;
-                    // 2. Add the 5px offset you used in drawTiles
-                    const waterSurfaceY = gridY - 5.0;
-                    // std.debug.print("playerY: {d} waterTopY: {d}\n", .{ p_y, gridElementTopY });
-                    if (rect.getBottomEdge() >= waterSurfaceY) {
-                        std.debug.print("PLAYER BOTTOM TOUCHED WATER gridY: {d} bottomL: {d}\n", .{ gridY, bottomLeft });
-                        self.player.startFalling(dt);
-                        self.handleCollisionss2(
-                            dt,
-                            .FALLING,
-                            waterSurfaceY,
-                            self.world.getObjectProperties(4).?,
-                            null,
-                        );
-                    }
-                }
+            } else {
+                // AIR: Nothing below feet
+                self.player.setIsOnGround(false);
             }
-            // const player = self.player.getRect();
-            // const rightSideOfPLayer = player.getRightEdge();
-            // const topTile = self.world.getTilesAt(rightSideOfPLayer, player.getPosition().y + 2);
-            // const bottomTile = self.world.getTilesAt(rightSideOfPLayer, player.getPosition().y + player.getHeight() - 2);
-            // std.debug.print("TOP: {d}\n", .{topTile});
-            // if (self.world.isSolid(Utils.floatFromInt(f32, topTile), Utils.floatFromInt(f32, bottomTile))) {
-            //     std.debug.print("player collided\n", .{});
-            // }
+        } else if (vel_y < 0.0) {
+            std.debug.print("VEL < 0 {d}\n", .{vel_y});
+            // HEAD BUMP: Check if top hits a solid tile (ID 3 or 5)
+            if (topLeft == 3 or topRight == 3 or topLeft == 5 or topRight == 5) {
+                const id = if (topLeft != 0) topLeft else topRight;
+                const ceilLine = @ceil(p_y / 32.0) * 32.0;
+                self.handleCollisionss2(
+                    dt,
+                    .HEAD_BUMP,
+                    ceilLine,
+                    &self.world.getObjectProperties(id).?,
+                    .Y,
+                    null,
+                );
+            }
+        }
+
+        // --- HORIZONTAL COLLISIONS (Walls) ---
+        // if (vel_x > 0) {
+        //     if (middleRight == 3 or topRight == 3 or bottomRight == 3) {
+        //         const wallX = @floor((p_x + p_w) / 32.0) * 32.0;
+        //         self.player.rect.setPosition(.X, wallX - p_w);
+        //         self.player.setVelocity(.X, 0);
+        //     }
+        // } else if (vel_x < 0) {
+        //     if (middleLeft == 3 or topLeft == 3 or bottomLeft == 3) {
+        //         const wallX = @ceil(p_x / 32.0) * 32.0;
+        //         self.player.rect.setPosition(.X, wallX);
+        //         self.player.setVelocity(.X, 0);
+        //     }
+        // }
+    }
+    fn handleCollisionss2(
+        self: *Self,
+        dt: f32,
+        collisionType: COLLISION_TYPES,
+        objectPosition: f32,
+        properties: *const ObjectProperties,
+        position: POSITION,
+        dirction: ?DIRECTION,
+    ) void {
+        switch (collisionType) {
+            .FALLING => {
+                switch (properties.objectType) {
+                    LevelBluePrintMappingObjectTypes.GROUND => {
+                        self.player.getRect().setPosition(
+                            .Y,
+                            objectPosition - self.player.getRect().getHeight(),
+                        );
+                        self.player.setVelocity(.Y, 0.0);
+                        self.player.setIsOnGround(true);
+                    },
+                    LevelBluePrintMappingObjectTypes.WATER => self.player.getRect().setPosition(
+                        .Y,
+                        objectPosition - self.player.getRect().getHeight(),
+                    ),
+                    else => {},
+                }
+            },
+            .WALL => {
+                if (dirction) |dir| {
+                    if (dir == .LEFT) {}
+                }
+            },
+            .HEAD_BUMP => {
+                self.player.getRect().setPosition(.Y, objectPosition + self.player.getRect().getHeight());
+                self.player.setVelocity(.Y, 0.0);
+                self.player.startFalling(dt);
+            },
+        }
+        if (properties.damage != null) {
+            self.handleDamage2(dt, position, properties);
+        }
+    }
+    fn handleDamage2(self: *Self, dt: f32, position: POSITION, properties: *const ObjectProperties) void {
+        if (self.currentTime == 0.0) {
+            self.currentTime = rayLib.getTime();
+            self.player.applyDamage(dt, position, properties);
+            self.widgets.healthBarRect.setWidth(self.player.getHealth());
+        }
+        const elapsedTime = rayLib.getTime() - self.currentTime;
+        if (properties.damage) |damageComponent| {
+            if (damageComponent.damageOverTime and elapsedTime > 1.0) {
+                self.player.applyDamage(dt, position, properties);
+                self.widgets.healthBarRect.setWidth(self.player.getHealth());
+            }
+        }
+        if (self.player.health <= 0) {
+            self.handleGameOver();
         }
     }
     fn handleCamera(self: *Self, dt: f32, screenW: f32, camera: *rayLib.Camera2D) void {
@@ -266,56 +407,6 @@ pub const Game = struct {
         rayLib.endMode2D();
         self.widgets.draw();
         rayLib.endDrawing();
-    }
-    fn handleCollisionss2(self: *Self, dt: f32, collisionType: COLLISION_TYPES, objectPosition: f32, properties: ObjectProperties, dirction: ?DIRECTION) void {
-        std.debug.print("OOOOOOOOOOOOO: {any}\n", .{properties.objectType});
-        switch (collisionType) {
-            .FALLING => {
-                switch (properties.objectType) {
-                    LevelBluePrintMappingObjectTypes.GROUND => self.player.getRect().setPosition(
-                        .Y,
-                        objectPosition - self.player.getRect().getHeight(),
-                    ),
-                    LevelBluePrintMappingObjectTypes.WATER => {
-                        // self.player.getRect().setPosition(.Y, objectPosition - self.player.getRect().getHeight());
-                        self.player.getRect().setPosition(.Y, objectPosition - self.player.getRect().getHeight());
-                    },
-                    else => {},
-                }
-                self.player.setVelocity(.Y, 0.0);
-                self.player.setIsOnGround(true);
-            },
-            .WALL => {
-                if (dirction) |dir| {
-                    if (dir == .LEFT) {}
-                }
-            },
-            .HEAD_BUMP => {
-                self.player.getRect().setPosition(.Y, objectPosition + self.player.getRect().getHeight());
-                self.player.setVelocity(.Y, 0.0);
-                self.player.startFalling(dt);
-            },
-        }
-        // if (properties.damage != null) {
-        //     self.handleDamage2(dt, .Y, properties);
-        // }
-    }
-    fn handleDamage2(self: *Self, dt: f32, position: POSITION, properties: ObjectProperties) void {
-        if (self.currentTime == 0.0) {
-            self.currentTime = rayLib.getTime();
-            self.player.applyDamage(dt, position, properties);
-            self.widgets.healthBarRect.setWidth(self.player.getHealth());
-        }
-        const elapsedTime = rayLib.getTime() - self.currentTime;
-        if (properties.damage) |damageComponent| {
-            if (damageComponent.damageOverTime and elapsedTime > 1.0) {
-                self.player.applyDamage(dt, position, properties);
-                self.widgets.healthBarRect.setWidth(self.player.getHealth());
-            }
-        }
-        if (self.player.health <= 0) {
-            self.handleGameOver();
-        }
     }
     fn checkForIntersection(self: *Self, dt: f32, otherRect: Platform) void {
         const intersector = otherRect.getRect();
