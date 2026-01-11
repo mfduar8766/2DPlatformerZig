@@ -9,6 +9,12 @@ const process = std.process;
 const print = std.debug.print;
 const builtIn = @import("builtin");
 const posix = std.posix;
+const rayLib = @import("raylib");
+
+const SIGN_CONVERSION = enum(u2) {
+    POSITIVE = 0,
+    NEGATIVE = 1,
+};
 
 pub const Errors = error{
     FileNotFound,
@@ -841,4 +847,23 @@ pub fn floatFromInt(comptime T: type, int: anytype) T {
 
 pub fn intFromFloat(comptime T: type, int: anytype) T {
     return @as(T, @intFromFloat(int));
+}
+
+pub fn lerp(start: f32, end: f32, amount: f32) f32 {
+    return rayLib.math.lerp(start, end, amount);
+}
+
+pub fn isNegativeNumber(int: anytype) bool {
+    return std.math.signbit(int);
+}
+
+///Converts NEGATIVE to POSITIVE or POSITIVE to NEGATIVE
+///
+/// Example .NEGATVE will convert to + and .POSITIVE will convert to -
+pub fn convertSigns(signConversion: SIGN_CONVERSION, int: anytype) @TypeOf(int) {
+    if (signConversion == .NEGATIVE) {
+        return std.math.copysign(int, 1.0);
+    } else {
+        return std.math.copysign(int, -1.0);
+    }
 }

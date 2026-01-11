@@ -23,7 +23,7 @@ pub const ObjectEffects = struct {
     const Self = @This();
     bounce: bool = false,
     bounceAmount: f32 = 0.0,
-    freze: bool = false,
+    freeze: bool = false,
     instaKill: bool = false,
     slippery: bool = false,
 
@@ -112,13 +112,15 @@ pub const Rectangle = struct {
     pub fn setHeight(self: *Self, value: f32) void {
         self.rect.height = value;
     }
-    ///This is the bottom edge of the platform
+    ///This is the bottom edge of the rectangle
     ///
     ///For example:
-    ///If the platform is 50X50 and the vector is (300.0, -200.0)
-    /// The bottom of the platform is -200.0+50.0 = -150.0
+    ///If the rectangle is 50X50 and the vector is (300.0, -200.0)
+    /// The bottom of the rectangle is -200.0+50.0 = -150.0
     ///
     /// This is the bottom of the rectangle
+    ///
+    /// self.rect.y + self.rect.height
     pub fn getBottomEdge(self: Self) f32 {
         return self.rect.y + self.rect.height;
     }
@@ -132,15 +134,15 @@ pub const Rectangle = struct {
     pub fn getCenterX(self: Self) f32 {
         return self.getPosition().x + (self.getWidth() / 2.0);
     }
-    ///This gets the horizontal line of the platform
+    ///This gets the horizontal line of the rectangle
     ///
     /// For example:
     ///
-    /// If the vector is (200.0, 200.0) and the width is 300 then then right edge, or the width of the platform is 200+300 = 500
+    /// If the vector is (200.0, 200.0) and the width is 300 then then right edge, or the width of the rectangle is 200+300 = 500
     ///
     /// Anything with an X-coordinate less than 500 is to the left of that edge.
     ///
-    ///Anything with an X-coordinate greater than 500 has moved past the platform.
+    ///Anything with an X-coordinate greater than 500 has moved past the rectangle.
     pub fn getRightEdge(self: Self) f32 {
         return self.rect.x + self.rect.width;
     }
@@ -148,44 +150,41 @@ pub const Rectangle = struct {
     pub fn getLeftEdge(self: Self) f32 {
         return self.rect.x;
     }
-    fn setDamageAmount(_: *Self) void {
-        //     switch (self.objectType) {
-        //         // Use the capture syntax |value| to get the data inside
-        //         .PLAYER => |player_id| {
-        //             // player_id is the u2
-        //             std.debug.print("Interacting with Player ID: {d}\n", .{player_id});
-        //         },
-        //         .PLATFORM => |plat_type| {
-        //             // plat_type is the PLATFORM_TYPES enum
-        //             switch (plat_type) {
-        //                 .GROUND => std.debug.print("Hit the ground\n", .{}),
-        //                 .ICE => self.damage = DamageHandler.init(true, 10.0, true),
-        //                 .VERTICAL => {},
-        //                 .SLIPPERY => {},
-        //                 .WATER => self.damage = DamageHandler.init(true, 10.0, true),
-        //                 .GRASS => {},
-        //                 .WALL => self.effects = ObjectEffects.init(true, 10.0, false, false, false),
-        //                 else => {},
-        //             }
-        //         },
-        //         .ENEMY => |enemy_type| {
-        //             switch (enemy_type) {
-        //                 .LOW => {},
-        //                 .MED => {},
-        //                 .HIGH => {},
-        //                 .BOSS => {},
-        //             }
-        //         },
-        //         .LEVEL => |level_idx| {
-        //             switch (level_idx) {
-        //                 .STANDARD => {},
-        //                 .MINI_BOSS => {},
-        //                 .BOSS => {},
-        //             }
-        //         },
-        //         else => |payload| {
-        //             std.debug.print("Other interaction: {any}\n", .{payload});
-        //         },
-        //     }
+    fn setDamageAmount(self: *Self) void {
+        switch (self.objectType) {
+            // Use the capture syntax |value| to get the data inside
+            .PLATFORM => |plat_type| {
+                switch (plat_type) {
+                    .GROUND => {
+                        self.damage = DamageHandler.init(true, 10.0, false);
+                    },
+                    .ICE => self.damage = DamageHandler.init(true, 10.0, true),
+                    .VERTICAL => {},
+                    .SLIPPERY => {},
+                    .WATER => {
+                        self.damage = DamageHandler.init(true, 10.0, true);
+                        self.effects = ObjectEffects.init(true, 10.0, false, false, false);
+                    },
+                    .GRASS => {},
+                    .WALL => self.effects = ObjectEffects.init(true, 10.0, false, false, false),
+                }
+            },
+            .ENEMY => |enemy_type| {
+                switch (enemy_type) {
+                    .LOW => {},
+                    .MED => {},
+                    .HIGH => {},
+                    .BOSS => {},
+                }
+            },
+            .LEVEL => |level_idx| {
+                switch (level_idx) {
+                    .STANDARD => {},
+                    .MINI_BOSS => {},
+                    .BOSS => {},
+                }
+            },
+            else => |_| {},
+        }
     }
 };

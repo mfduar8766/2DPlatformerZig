@@ -1,6 +1,8 @@
 const std = @import("std");
 const PLATFORM_TYPES = @import("../types.zig").PLATFORM_TYPES;
 const ENEMY_TYPES = @import("../types.zig").ENEMY_TYPES;
+const Player = @import("../game/player.zig").Player;
+const Platforms = @import("../game//platforms.zig");
 
 pub const GameObjects = struct {
     const Self = @This();
@@ -19,4 +21,9 @@ pub const GameObjects = struct {
         self.platformTypes.deinit();
         self.enemyTypes.deinit();
     }
+};
+
+const Entity = union(enum) {
+    player: *Player,
+    platforms: *Platforms,
 };
