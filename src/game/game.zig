@@ -4,15 +4,16 @@ const Player = @import("./player.zig").Player;
 const Platform = @import("./platforms.zig").Platform;
 const Rectangle = @import("../common/shapes.zig").Rectangle;
 const GAME_OBJECT_TYPES = @import("../types.zig").GAME_OBJECT_TYPES;
-const Enemy = @import("./enemies.zig").Enemy;
 const PLATFORM_TYPES = @import("../types.zig").PLATFORM_TYPES;
 const GRAVITY = @import("../types.zig").GRAVITY;
 const PLAYER_STATE = @import("../types.zig").PLAYER_STATE;
 const Utils = @import("../utils/utils.zig");
-const World2 = @import("./levels.zig").World2;
 const POSITION = @import("../types.zig").POSITION;
 const COLLISION_TYPES = @import("../types.zig").COLLISION_TYPES;
 const DIRECTION = @import("../types.zig").DIRECTION;
+const World = @import("./world.zig").World;
+const ObjectProperties = @import("./world.zig").ObjectProperties;
+const LevelBluePrintMappingObjectTypes = @import("./world.zig").LevelBluePrintMappingObjectTypes;
 
 pub const Config = struct {
     const Self = @This();
@@ -36,15 +37,15 @@ const Widgets = struct {
     healthBarRect: Rectangle = Rectangle.init(
         GAME_OBJECT_TYPES{ .UI = .HEALTH_BAR },
         100.0,
-        20,
+        15,
         rayLib.Vector2.init(10.0, 10.0),
         .red,
     ),
     staminaBarRect: Rectangle = Rectangle.init(
         GAME_OBJECT_TYPES{ .UI = .STAMINA_BAR },
         100.0,
-        20,
-        rayLib.Vector2.init(10.0, 40.0),
+        15,
+        rayLib.Vector2.init(10.0, 30.0),
         .green,
     ),
 
@@ -68,7 +69,7 @@ pub const Game = struct {
     currentLevel: usize = 0,
     isGameOver: bool = false,
     currentTime: f64 = 0.0,
-    world: *World2(totalLevels, 0) = undefined,
+    world: *World(totalLevels, 0) = undefined,
 
     pub fn init(allocator: std.mem.Allocator) !*Self {
         const gamePtr = try allocator.create(Self);
@@ -103,173 +104,218 @@ pub const Game = struct {
         while (!rayLib.windowShouldClose()) {
             const dt = rayLib.getFrameTime();
             try self.update(dt);
-            //CAMERA
-            // camera.target.x += (self.player.getRect().getPosition().x - camera.target.x) * lerpFactor * dt;
-            // camera.target.y += (self.player.getRect().getPosition().y - camera.target.y) * lerpFactor * dt;
-            camera.target = rayLib.Vector2.lerp(camera.target, self.player.getRect().getPosition(), lerpFactor * dt);
-
-            //Global World Clamping (Stops camera at very beginning and very end of world)
-            const startOfWorld = self.world.getRect().getPosition().x;
-            const endOfWorld = self.world.getRect().getRightEdge();
-            const halfViewX = (screenW / 2.0) / camera.zoom;
-            const leftLimit = startOfWorld + halfViewX;
-            const rightLimit = endOfWorld - halfViewX;
-            if (camera.target.x < leftLimit) camera.target.x = leftLimit;
-            if (camera.target.x > rightLimit) camera.target.x = rightLimit;
-
-            //DRAW
-            rayLib.beginDrawing();
-            rayLib.beginMode2D(camera);
-            rayLib.clearBackground(rayLib.Color.sky_blue);
-            self.widgets.draw();
-            self.world.draw();
-            self.player.draw();
-            rayLib.endMode2D();
-            rayLib.endDrawing();
+            self.handleCamera(dt, screenW, &camera);
+            self.draw(camera);
         }
     }
-    // pub fn run(self: *Self) !void {
-    //     rayLib.initWindow(self.config.windowWidth, self.config.windowHeight, self.config.windowTitle);
-    //     defer rayLib.closeWindow();
-    //     rayLib.setTargetFPS(self.config.fps);
-
-    //     try self.createGameObjects();
-    // const screenH = Utils.floatFromInt(f32, rayLib.getScreenHeight());
-    // const screenW = Utils.floatFromInt(f32, rayLib.getScreenWidth());
-    // var camera = rayLib.Camera2D{
-    //     .target = self.player.rect.getPosition(),
-    //     .offset = rayLib.Vector2.init(
-    //         screenW / 2.0,
-    //         screenH - 100.0, // Player pinned near bottom
-    //     ),
-    //     .rotation = 0.0,
-    //     .zoom = 1.0,
-    // };
-
-    //     while (!rayLib.windowShouldClose()) {
-    //         const dt = rayLib.getFrameTime();
-    //         if (self.isGameOver) {
-    //             self.resetGameState();
-    //             continue;
-    //         }
-
-    //         const currentLevelObj = self.world.levels[self.currentLevel];
-    //         const playerCenterX = self.player.getRect().getCenterX();
-
-    //         // --- 1. UPDATE PHASE (Movement & Level Switching) ---
-    //         // Pass the level bounds for horizontal clamping/walls
-    //         self.player.handleMovement(dt, self.world.getRect());
-
-    //         // Seamless Level Switching based on Player Center
-    //         if (playerCenterX > currentLevelObj.getRect().getRightEdge()) {
-    //             if (self.currentLevel < self.world.levels.len - 1) {
-    //                 self.currentLevel += 1;
-    //             }
-    //         } else if (playerCenterX < currentLevelObj.getRect().getPosition().x) {
-    //             if (self.currentLevel > 0) {
-    //                 self.currentLevel -= 1;
-    //             }
-    //         }
-
-    //         // --- 2. MULTI-LEVEL COLLISION ---
-    //         // We check current, previous, and next level so the "seams" are solid
-    //         var isOnGround = false;
-    //         const checkOffsets = [_]isize{ -1, 0, 1 };
-
-    //         for (checkOffsets) |offset| {
-    //             const idx = @as(isize, @intCast(self.currentLevel)) + offset;
-    //             if (idx >= 0 and idx < self.world.levels.len) {
-    //                 const targetLevel = self.world.levels[@as(usize, @intCast(idx))];
-    //                 for (targetLevel.staticPlatforms) |platform| {
-    //                     self.checkForIntersection(dt, platform);
-    //                     // Critical: set ground flag regardless of which level the platform belongs to
-    //                     if (self.isOnTopOfPlatform(platform)) {
-    //                         isOnGround = true;
-    //                     }
-    //                 }
-    //             }
-    //         }
-
-    //         // Apply Grounded/Falling State
-    //         self.player.setIsOnGround(isOnGround);
-    //         if (isOnGround) {
-    //             self.player.setIsFalling(false);
-    //         } else if (self.player.getVelocity(.Y) > 0) {
-    //             self.player.setIsFalling(true);
-    //         }
-
-    //         // --- 3. CAMERA LOGIC ---
-    //         // Smoothly follow player
-    // camera.target.x += (self.player.rect.getPosition().x - camera.target.x) * lerpFactor * dt;
-    // camera.target.y += (self.player.rect.getPosition().y - camera.target.y) * lerpFactor * dt;
-
-    //         // Global World Clamping (Stops camera at very beginning and very end of ALL levels)
-    //         const startOfWorld = self.world.levels[0].getRect().getPosition().x;
-    //         const endOfWorld = self.world.levels[self.world.levels.len - 1].getRect().getRightEdge();
-    //         const halfViewX = (screenW / 2.0) / camera.zoom;
-    //         const leftLimit = startOfWorld + halfViewX;
-    //         const rightLimit = endOfWorld - halfViewX;
-    //         if (camera.target.x < leftLimit) camera.target.x = leftLimit;
-    //         if (camera.target.x > rightLimit) camera.target.x = rightLimit;
-
-    //         // --- 4. CULLING RECT ---
-    //         // Defines exactly what the camera "sees" in world coordinates
-    //         const cameraRect = rayLib.Rectangle.init(
-    //             camera.target.x - (camera.offset.x / camera.zoom),
-    //             camera.target.y - (camera.offset.y / camera.zoom),
-    //             screenW / camera.zoom,
-    //             screenH / camera.zoom,
-    //         );
-
-    //         // --- 5. DRAW PHASE ---
-    //         rayLib.beginDrawing();
-    //         rayLib.clearBackground(rayLib.Color.sky_blue);
-    //         rayLib.beginMode2D(camera);
-    //         // Draw platforms from ALL levels, but only if they are on screen (Culling)
-    //         for (self.world.levels) |lvl| {
-    //             for (lvl.staticPlatforms) |platform| {
-    //                 if (rayLib.checkCollisionRecs(cameraRect, platform.getRect().rect)) {
-    //                     platform.draw();
-    //                 }
-    //             }
-    //         }
-    //         self.player.draw();
-    //         rayLib.endMode2D();
-    //         self.widgets.draw();
-    //         rayLib.endDrawing();
-    //     }
-    // }
     fn createGameObjects(self: *Self) !void {
         self.widgets = Widgets.init();
         self.player = try Player.init(self.allocator, self.config);
-        self.world = try World2(totalLevels, 0).init(self.allocator);
+        self.world = try World(totalLevels, 0).init(self.allocator);
     }
     fn update(self: *Self, dt: f32) !void {
         self.player.handleMovement(dt, self.world.getRect());
         const playerCenterX = self.player.getRect().getCenterX();
         const currentPlayerLocation = Utils.intFromFloat(usize, playerCenterX / self.world.getLevelWidth());
-        const newLevelIndex = @min(currentPlayerLocation, totalLevels - 1);
-        if (newLevelIndex != self.world.getLevelIndex()) {
-            std.debug.print("Moving to level: {d}\n", .{newLevelIndex});
-            try self.world.loadLevel(newLevelIndex);
+        const nextLevelIndex = @min(currentPlayerLocation, totalLevels - 1);
+        if (nextLevelIndex != self.world.getLevelIndex()) {
+            std.debug.print("Moving to next level at index: {d}\n", .{nextLevelIndex});
+            try self.world.loadLevel(nextLevelIndex);
         }
         //CHECK FOR COLLISIONS
+        if (nextLevelIndex == self.world.getLevelIndex()) {
+            self.checkForCollisions(dt);
+        }
         // if (safe_idx == self.world.getLevelIndex()) {
-        //     const rect = self.player.getRect();
-        //     const p_x = rect.getPosition().x;
-        //     const p_y = rect.getPosition().y;
-        //     const p_w = rect.getWidth();
-        //     const p_h = rect.getHeight();
-        //     // Check points at the player's feet
-        //     const bottomLeft = self.world.getTilesAt(p_x + 2, p_y + p_h);
-        //     const bottomRight = self.world.getTilesAt(p_x + p_w - 2, p_y + p_h);
-        //     if (bottomLeft != 0 or bottomRight != 0) {
-        //         // std.debug.print("CCCCCCC {any} {any} {any}\n", .{ bottomLeft, bottomRight, right });
-        //         // We hit something!
-        //         // If ID is 1 (Ground), stop falling.
-        //         // If ID is 4 (Spikes), take damage.
-        //     }
+        // const rect = self.player.getRect();
+        // const p_x = rect.getPosition().x;
+        // const p_y = rect.getPosition().y;
+        // const p_w = rect.getWidth();
+        // const p_h = rect.getHeight();
+        // // Check points at the player's feet
+        // const bottomLeft = self.world.getTilesAt(p_x + 2, p_y + p_h);
+        // const bottomRight = self.world.getTilesAt(p_x + p_w - 2, p_y + p_h);
+        // if (bottomLeft != 0 or bottomRight != 0) {
+        //     // std.debug.print("CCCCCCC {any} {any} {any}\n", .{ bottomLeft, bottomRight, right });
+        //     // We hit something!
+        //     // If ID is 1 (Ground), stop falling.
+        //     // If ID is 4 (Spikes), take damage.
         // }
+        // }
+    }
+    fn checkForCollisions(self: *Self, dt: f32) void {
+        const rect = self.player.getRect();
+        const p_x = rect.getPosition().x;
+        const p_y = rect.getPosition().y;
+        const p_w = rect.getWidth();
+        const p_h = rect.getHeight();
+        const margin: f32 = 2.0;
+        const topLeft = self.world.getTilesAt(p_x + margin, p_y);
+        const topRight = self.world.getTilesAt(p_x + p_w - margin, p_y);
+
+        // --- FLOOR CHECK (Bottom edge) ---
+        // We check exactly at the feet (y + height)
+        const bottomLeft = self.world.getTilesAt(p_x + margin, p_y + p_h);
+        const bottomRight = self.world.getTilesAt(p_x + p_w - margin, p_y + p_h);
+
+        // --- WALL CHECKS (Sides) ---
+        const middleLeft = self.world.getTilesAt(p_x, p_y + (p_h / 2));
+        const middleRight = self.world.getTilesAt(p_x + p_w, p_y + (p_h / 2));
+
+        if (topLeft != 0 or topRight != 0 or bottomLeft != 0 or bottomRight != 0) {
+            //CASE: Falling and landing on any surface
+            if (self.player.getVelocity(.Y) > 0.0) {
+                std.debug.print("GREATER bottomL: {d} \n", .{bottomLeft});
+                if (bottomLeft == 1 and bottomRight == 1) {
+                    const groundTopY = @floor(rect.getBottomEdge() / 32.0) * 32.0;
+                    if (self.player.rect.getPosition().y <= groundTopY) {
+                        self.handleCollisionss2(
+                            dt,
+                            .FALLING,
+                            groundTopY,
+                            self.world.getObjectProperties(1).?,
+                            null,
+                        );
+                    }
+                }
+            }
+            //CASE: Jumping up and hitting the bottom of any surface
+            else if (self.player.getVelocity(.Y) < 0 and 0 == self.player.getVelocity(.X) and topLeft == 5 and topRight == 5) {
+                const platformBottomY = @floor(rect.getTopEdge() / 32.0) * 32.0;
+                if (rect.getTopEdge() >= platformBottomY) {
+                    self.handleCollisionss2(
+                        dt,
+                        .HEAD_BUMP,
+                        platformBottomY,
+                        self.world.getObjectProperties(5).?,
+                        null,
+                    );
+                }
+            } else if (self.player.getVelocity(.X) > 0) {
+                //CASE: Wall collisions
+                if (middleRight == 3) {
+                    //
+                } else if (middleLeft == 3) {
+                    //
+                }
+                // CASE: falling from the ground
+                else if (bottomLeft == 2 and bottomRight == 2) {
+                    const gridY = @floor(rect.getBottomEdge() / 32.0) * 32.0;
+                    // 2. Add the 5px offset you used in drawTiles
+                    const waterSurfaceY = gridY - 5.0;
+                    // std.debug.print("playerY: {d} waterTopY: {d}\n", .{ p_y, gridElementTopY });
+                    if (rect.getBottomEdge() >= waterSurfaceY) {
+                        std.debug.print("PLAYER BOTTOM TOUCHED WATER gridY: {d} bottomL: {d}\n", .{ gridY, bottomLeft });
+                        self.player.startFalling(dt);
+                        self.handleCollisionss2(
+                            dt,
+                            .FALLING,
+                            waterSurfaceY,
+                            self.world.getObjectProperties(2).?,
+                            null,
+                        );
+                    }
+                } else if (bottomLeft == 4 and bottomRight == 4) {
+                    const gridY = @floor(rect.getBottomEdge() / 32.0) * 32.0;
+                    // 2. Add the 5px offset you used in drawTiles
+                    const waterSurfaceY = gridY - 5.0;
+                    // std.debug.print("playerY: {d} waterTopY: {d}\n", .{ p_y, gridElementTopY });
+                    if (rect.getBottomEdge() >= waterSurfaceY) {
+                        std.debug.print("PLAYER BOTTOM TOUCHED WATER gridY: {d} bottomL: {d}\n", .{ gridY, bottomLeft });
+                        self.player.startFalling(dt);
+                        self.handleCollisionss2(
+                            dt,
+                            .FALLING,
+                            waterSurfaceY,
+                            self.world.getObjectProperties(4).?,
+                            null,
+                        );
+                    }
+                }
+            }
+            // const player = self.player.getRect();
+            // const rightSideOfPLayer = player.getRightEdge();
+            // const topTile = self.world.getTilesAt(rightSideOfPLayer, player.getPosition().y + 2);
+            // const bottomTile = self.world.getTilesAt(rightSideOfPLayer, player.getPosition().y + player.getHeight() - 2);
+            // std.debug.print("TOP: {d}\n", .{topTile});
+            // if (self.world.isSolid(Utils.floatFromInt(f32, topTile), Utils.floatFromInt(f32, bottomTile))) {
+            //     std.debug.print("player collided\n", .{});
+            // }
+        }
+    }
+    fn handleCamera(self: *Self, dt: f32, screenW: f32, camera: *rayLib.Camera2D) void {
+        // camera.target.x += (self.player.getRect().getPosition().x - camera.target.x) * lerpFactor * dt;
+        // camera.target.y += (self.player.getRect().getPosition().y - camera.target.y) * lerpFactor * dt;
+        camera.target = rayLib.Vector2.lerp(camera.target, self.player.getRect().getPosition(), lerpFactor * dt);
+
+        //Global World Clamping (Stops camera at very beginning and very end of world)
+        const startOfWorld = self.world.getRect().getPosition().x;
+        const endOfWorld = self.world.getRect().getRightEdge();
+        const halfViewX = (screenW / 2.0) / camera.zoom;
+        const leftLimit = startOfWorld + halfViewX;
+        const rightLimit = endOfWorld - halfViewX;
+        if (camera.target.x < leftLimit) camera.target.x = leftLimit;
+        if (camera.target.x > rightLimit) camera.target.x = rightLimit;
+    }
+    fn draw(self: *Self, camera: rayLib.Camera2D) void {
+        rayLib.beginDrawing();
+        rayLib.beginMode2D(camera);
+        rayLib.clearBackground(rayLib.Color.sky_blue);
+        self.world.draw();
+        self.player.draw();
+        rayLib.endMode2D();
+        self.widgets.draw();
+        rayLib.endDrawing();
+    }
+    fn handleCollisionss2(self: *Self, dt: f32, collisionType: COLLISION_TYPES, objectPosition: f32, properties: ObjectProperties, dirction: ?DIRECTION) void {
+        std.debug.print("OOOOOOOOOOOOO: {any}\n", .{properties.objectType});
+        switch (collisionType) {
+            .FALLING => {
+                switch (properties.objectType) {
+                    LevelBluePrintMappingObjectTypes.GROUND => self.player.getRect().setPosition(
+                        .Y,
+                        objectPosition - self.player.getRect().getHeight(),
+                    ),
+                    LevelBluePrintMappingObjectTypes.WATER => {
+                        // self.player.getRect().setPosition(.Y, objectPosition - self.player.getRect().getHeight());
+                        self.player.getRect().setPosition(.Y, objectPosition - self.player.getRect().getHeight());
+                    },
+                    else => {},
+                }
+                self.player.setVelocity(.Y, 0.0);
+                self.player.setIsOnGround(true);
+            },
+            .WALL => {
+                if (dirction) |dir| {
+                    if (dir == .LEFT) {}
+                }
+            },
+            .HEAD_BUMP => {
+                self.player.getRect().setPosition(.Y, objectPosition + self.player.getRect().getHeight());
+                self.player.setVelocity(.Y, 0.0);
+                self.player.startFalling(dt);
+            },
+        }
+        // if (properties.damage != null) {
+        //     self.handleDamage2(dt, .Y, properties);
+        // }
+    }
+    fn handleDamage2(self: *Self, dt: f32, position: POSITION, properties: ObjectProperties) void {
+        if (self.currentTime == 0.0) {
+            self.currentTime = rayLib.getTime();
+            self.player.applyDamage(dt, position, properties);
+            self.widgets.healthBarRect.setWidth(self.player.getHealth());
+        }
+        const elapsedTime = rayLib.getTime() - self.currentTime;
+        if (properties.damage) |damageComponent| {
+            if (damageComponent.damageOverTime and elapsedTime > 1.0) {
+                self.player.applyDamage(dt, position, properties);
+                self.widgets.healthBarRect.setWidth(self.player.getHealth());
+            }
+        }
+        if (self.player.health <= 0) {
+            self.handleGameOver();
+        }
     }
     fn checkForIntersection(self: *Self, dt: f32, otherRect: Platform) void {
         const intersector = otherRect.getRect();
@@ -344,21 +390,21 @@ pub const Game = struct {
             },
         }
     }
-    fn handleDamage(self: *Self, dt: f32, position: POSITION, otherRect: Rectangle) void {
-        if (self.currentTime == 0.0) {
-            self.currentTime = rayLib.getTime();
-            self.player.applyDamage(dt, position, otherRect);
-            self.widgets.healthBarRect.setWidth(self.player.getHealth());
-        }
-        const elapsedTime = rayLib.getTime() - self.currentTime;
-        if (otherRect.damage.damageOverTime and elapsedTime > 1.0) {
-            self.player.applyDamage(dt, position, otherRect);
-            self.widgets.healthBarRect.setWidth(self.player.getHealth());
-        }
-        if (self.player.health <= 0) {
-            self.handleGameOver();
-        }
-    }
+    // fn handleDamage(self: *Self, dt: f32, position: POSITION, otherRect: Rectangle) void {
+    //     if (self.currentTime == 0.0) {
+    //         self.currentTime = rayLib.getTime();
+    //         self.player.applyDamage(dt, position, otherRect);
+    //         self.widgets.healthBarRect.setWidth(self.player.getHealth());
+    //     }
+    //     const elapsedTime = rayLib.getTime() - self.currentTime;
+    //     if (otherRect.damage.damageOverTime and elapsedTime > 1.0) {
+    //         self.player.applyDamage(dt, position, otherRect);
+    //         self.widgets.healthBarRect.setWidth(self.player.getHealth());
+    //     }
+    //     if (self.player.health <= 0) {
+    //         self.handleGameOver();
+    //     }
+    // }
     ///Check if the player is horizontally overlapping the platform
     fn isWithinHorizontalBounds(self: Self, platform: Platform) bool {
         return self.player.rect.getRightEdge() > platform.rect.getLeftEdge() and
@@ -472,4 +518,116 @@ pub const Game = struct {
 //     for (self.enemies.items) |e| e.draw();
 //     rayLib.endMode2D();
 //     rayLib.endDrawing();
+// }
+
+// pub fn run(self: *Self) !void {
+//     rayLib.initWindow(self.config.windowWidth, self.config.windowHeight, self.config.windowTitle);
+//     defer rayLib.closeWindow();
+//     rayLib.setTargetFPS(self.config.fps);
+
+//     try self.createGameObjects();
+// const screenH = Utils.floatFromInt(f32, rayLib.getScreenHeight());
+// const screenW = Utils.floatFromInt(f32, rayLib.getScreenWidth());
+// var camera = rayLib.Camera2D{
+//     .target = self.player.rect.getPosition(),
+//     .offset = rayLib.Vector2.init(
+//         screenW / 2.0,
+//         screenH - 100.0, // Player pinned near bottom
+//     ),
+//     .rotation = 0.0,
+//     .zoom = 1.0,
+// };
+
+//     while (!rayLib.windowShouldClose()) {
+//         const dt = rayLib.getFrameTime();
+//         if (self.isGameOver) {
+//             self.resetGameState();
+//             continue;
+//         }
+
+//         const currentLevelObj = self.world.levels[self.currentLevel];
+//         const playerCenterX = self.player.getRect().getCenterX();
+
+//         // --- 1. UPDATE PHASE (Movement & Level Switching) ---
+//         // Pass the level bounds for horizontal clamping/walls
+//         self.player.handleMovement(dt, self.world.getRect());
+
+//         // Seamless Level Switching based on Player Center
+//         if (playerCenterX > currentLevelObj.getRect().getRightEdge()) {
+//             if (self.currentLevel < self.world.levels.len - 1) {
+//                 self.currentLevel += 1;
+//             }
+//         } else if (playerCenterX < currentLevelObj.getRect().getPosition().x) {
+//             if (self.currentLevel > 0) {
+//                 self.currentLevel -= 1;
+//             }
+//         }
+
+//         // --- 2. MULTI-LEVEL COLLISION ---
+//         // We check current, previous, and next level so the "seams" are solid
+//         var isOnGround = false;
+//         const checkOffsets = [_]isize{ -1, 0, 1 };
+
+//         for (checkOffsets) |offset| {
+//             const idx = @as(isize, @intCast(self.currentLevel)) + offset;
+//             if (idx >= 0 and idx < self.world.levels.len) {
+//                 const targetLevel = self.world.levels[@as(usize, @intCast(idx))];
+//                 for (targetLevel.staticPlatforms) |platform| {
+//                     self.checkForIntersection(dt, platform);
+//                     // Critical: set ground flag regardless of which level the platform belongs to
+//                     if (self.isOnTopOfPlatform(platform)) {
+//                         isOnGround = true;
+//                     }
+//                 }
+//             }
+//         }
+
+//         // Apply Grounded/Falling State
+//         self.player.setIsOnGround(isOnGround);
+//         if (isOnGround) {
+//             self.player.setIsFalling(false);
+//         } else if (self.player.getVelocity(.Y) > 0) {
+//             self.player.setIsFalling(true);
+//         }
+
+//         // --- 3. CAMERA LOGIC ---
+//         // Smoothly follow player
+// camera.target.x += (self.player.rect.getPosition().x - camera.target.x) * lerpFactor * dt;
+// camera.target.y += (self.player.rect.getPosition().y - camera.target.y) * lerpFactor * dt;
+
+//         // Global World Clamping (Stops camera at very beginning and very end of ALL levels)
+//         const startOfWorld = self.world.levels[0].getRect().getPosition().x;
+//         const endOfWorld = self.world.levels[self.world.levels.len - 1].getRect().getRightEdge();
+//         const halfViewX = (screenW / 2.0) / camera.zoom;
+//         const leftLimit = startOfWorld + halfViewX;
+//         const rightLimit = endOfWorld - halfViewX;
+//         if (camera.target.x < leftLimit) camera.target.x = leftLimit;
+//         if (camera.target.x > rightLimit) camera.target.x = rightLimit;
+
+//         // --- 4. CULLING RECT ---
+//         // Defines exactly what the camera "sees" in world coordinates
+//         const cameraRect = rayLib.Rectangle.init(
+//             camera.target.x - (camera.offset.x / camera.zoom),
+//             camera.target.y - (camera.offset.y / camera.zoom),
+//             screenW / camera.zoom,
+//             screenH / camera.zoom,
+//         );
+
+//         // --- 5. DRAW PHASE ---
+//         rayLib.beginDrawing();
+//         rayLib.clearBackground(rayLib.Color.sky_blue);
+//         rayLib.beginMode2D(camera);
+//         // Draw platforms from ALL levels, but only if they are on screen (Culling)
+//         for (self.world.levels) |lvl| {
+//             for (lvl.staticPlatforms) |platform| {
+//                 if (rayLib.checkCollisionRecs(cameraRect, platform.getRect().rect)) {
+//                     platform.draw();
+//                 }
+//             }
+//         }
+//         self.player.draw();
+//         rayLib.endMode2D();
+//         self.widgets.draw();
+//         rayLib.endDrawing();
+//     }
 // }

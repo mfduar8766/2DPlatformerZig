@@ -273,196 +273,285 @@ const PlatformBluePrint = struct {
 //     };
 // }
 
-const Level = struct {
-    const Self = @This();
-    allocator: std.mem.Allocator,
-    staticPlatforms: []const Platform = undefined,
-    dynamicPlatForms: std.ArrayList(*Platform),
-    enemies: std.ArrayList(*Enemy),
-    rect: Rectangle,
+// const Level = struct {
+//     const Self = @This();
+//     allocator: std.mem.Allocator,
+//     staticPlatforms: []const Platform = undefined,
+//     dynamicPlatForms: std.ArrayList(*Platform),
+//     enemies: std.ArrayList(*Enemy),
+//     rect: Rectangle,
 
-    pub fn init(allocator: std.mem.Allocator, platforms: []const Platform, rect: Rectangle) Self {
-        return .{
-            .allocator = allocator,
-            .staticPlatforms = platforms,
-            .dynamicPlatForms = std.ArrayList(*Platform).empty,
-            .enemies = std.ArrayList(*Enemy).empty,
-            .rect = rect,
+//     pub fn init(allocator: std.mem.Allocator, platforms: []const Platform, rect: Rectangle) Self {
+//         return .{
+//             .allocator = allocator,
+//             .staticPlatforms = platforms,
+//             .dynamicPlatForms = std.ArrayList(*Platform).empty,
+//             .enemies = std.ArrayList(*Enemy).empty,
+//             .rect = rect,
+//         };
+//     }
+//     pub fn deinit(self: *Self) void {
+//         self.allocator.free(self.staticPlatforms);
+//         self.dynamicPlatForms.deinit(self.allocator);
+//         self.enemies.deinit(self.allocator);
+//     }
+//     pub fn getRect(self: Self) Rectangle {
+//         return self.rect;
+//     }
+// };
+
+// pub fn World(comptime totalLevels: usize) type {
+//     return struct {
+//         const Self = @This();
+//         allocator: std.mem.Allocator,
+//         // levels: [totalLevels]Level,
+//         rect: Rectangle,
+
+//         pub fn init(allocator: std.mem.Allocator) !*Self {
+//             const self = try allocator.create(Self);
+//             self.allocator = allocator;
+//             var worldSize: f32 = 0;
+//             inline for (0..totalLevels) |i| {
+//                 self.levels[i] = try self.buildLevel(i);
+//                 worldSize += self.levels[i].getRect().getWidth();
+//             }
+//             self.rect = Rectangle.init(
+//                 .{ .WORLD = 0 },
+//                 3000.0,
+//                 Utils.floatFromInt(f32, rayLib.getScreenHeight()),
+//                 rayLib.Vector2.init(0, 0),
+//                 rayLib.Color.init(0, 0, 0, 0),
+//             );
+//             return self;
+//         }
+//         pub fn deinit(self: *Self) void {
+//             // for (0..totalLevels) |value| {
+//             //     self.levels[value].deinit();
+//             // }
+//             self.allocator.destroy(self);
+//         }
+//         pub fn getRect(self: Self) Rectangle {
+//             return self.rect;
+//         }
+//         // fn buildLevel(self: *Self, index: usize) !Level {
+//         // const platCount: usize = switch (index) {
+//         //     0 => 8,
+//         //     1 => 3,
+//         //     else => 0,
+//         // };
+//         // if (index == 0) {
+//         //     return Level.init(self.allocator, try self.createLevel0(platCount), Rectangle.init(
+//         //         .{ .LEVEL = .STANDARD },
+//         //         1500.0,
+//         //         Utils.floatFromInt(f32, rayLib.getScreenWidth()),
+//         //         rayLib.Vector2.init(0.0, 0.0),
+//         //         rayLib.Color.init(0, 0, 0, 0),
+//         //     ));
+//         // } else {
+//         //     const previousLevel = &self.levels[index - 1];
+//         //     const previousPlatform = previousLevel.staticPlatforms[previousLevel.staticPlatforms.len - 1].getRect();
+//         //     return Level.init(self.allocator, try self.createLevel1(platCount, previousPlatform), Rectangle.init(
+//         //         .{ .LEVEL = .STANDARD },
+//         //         1500.0,
+//         //         Utils.floatFromInt(f32, rayLib.getScreenWidth()),
+//         //         rayLib.Vector2.init(previousLevel.getRect().getRightEdge() + 1.0, 0.0),
+//         //         rayLib.Color.init(0, 0, 0, 0),
+//         //     ));
+//         // }
+//         // }
+//         // fn createLevel0(self: *Self, count: usize) ![]Platform {
+//         //     var list = try self.allocator.alloc(Platform, count);
+//         //     const ground = Platform.init(
+//         //         PLATFORM_TYPES.GROUND,
+//         //         300.0,
+//         //         100.0,
+//         //         rayLib.Vector2.init(0.0, @as(f32, @floatFromInt(rayLib.getScreenHeight())) - 50.0 / 2),
+//         //         .brown,
+//         //     );
+//         //     const ground2 = Platform.init(
+//         //         PLATFORM_TYPES.GROUND,
+//         //         300.0,
+//         //         100.0,
+//         //         rayLib.Vector2.init(ground.rect.getRightEdge(), @as(f32, @floatFromInt(rayLib.getScreenHeight())) - 50.0 / 2.0),
+//         //         .brown,
+//         //     );
+//         //     const water = Platform.init(
+//         //         PLATFORM_TYPES.WATER,
+//         //         500.0,
+//         //         100.0,
+//         //         rayLib.Vector2.init(ground2.rect.getRightEdge(), @as(f32, @floatFromInt(rayLib.getScreenHeight())) - 10.0),
+//         //         .dark_blue,
+//         //     );
+//         //     const verticalPlatform = Platform.init(
+//         //         PLATFORM_TYPES.VERTICAL,
+//         //         200.0,
+//         //         50.0,
+//         //         rayLib.Vector2.init(100.0, 400.0),
+//         //         .green,
+//         //     );
+//         //     const verticalPlatform0 = Platform.init(
+//         //         PLATFORM_TYPES.VERTICAL,
+//         //         200.0,
+//         //         50.0,
+//         //         rayLib.Vector2.init(300.0, 300.0),
+//         //         .green,
+//         //     );
+//         //     const icePlatform = Platform.init(
+//         //         PLATFORM_TYPES.ICE,
+//         //         200.0,
+//         //         50.0,
+//         //         rayLib.Vector2.init(500.0, 200.0),
+//         //         .white,
+//         //     );
+//         //     const verticalPlatform1 = Platform.init(
+//         //         PLATFORM_TYPES.GRASS,
+//         //         1000,
+//         //         50.0,
+//         //         rayLib.Vector2.init(icePlatform.rect.getRightEdge(), 500.0),
+//         //         .green,
+//         //     );
+//         //     const ver2 = Platform.init(
+//         //         PLATFORM_TYPES.WALL,
+//         //         100,
+//         //         200,
+//         //         rayLib.Vector2.init(400.0, 375.0),
+//         //         .green,
+//         //     );
+//         //     list[0] = ground;
+//         //     list[1] = ground2;
+//         //     list[2] = water;
+//         //     list[3] = verticalPlatform;
+//         //     list[4] = ver2;
+//         //     list[5] = verticalPlatform0;
+//         //     list[6] = icePlatform;
+//         //     list[7] = verticalPlatform1;
+//         //     // list[7] = ver2;
+//         //     return list;
+//         // }
+//         // fn createLevel1(self: *Self, count: usize, lastPlatformPosition: Rectangle) ![]Platform {
+//         //     var list = try self.allocator.alloc(Platform, count);
+//         //     const ground1 = Platform.init(
+//         //         PLATFORM_TYPES.GROUND,
+//         //         300.0,
+//         //         100.0,
+//         //         rayLib.Vector2.init(lastPlatformPosition.getRightEdge(), @as(f32, @floatFromInt(rayLib.getScreenHeight())) - 50.0 / 2.0),
+//         //         .red,
+//         //     );
+//         //     const ground2 = Platform.init(
+//         //         PLATFORM_TYPES.GROUND,
+//         //         300.0,
+//         //         100.0,
+//         //         rayLib.Vector2.init(ground1.getRect().getRightEdge(), @as(f32, @floatFromInt(rayLib.getScreenHeight())) - 50.0 / 2.0),
+//         //         .red,
+//         //     );
+//         //     const water = Platform.init(
+//         //         PLATFORM_TYPES.WATER,
+//         //         500.0,
+//         //         100.0,
+//         //         rayLib.Vector2.init(ground2.rect.getRightEdge(), @as(f32, @floatFromInt(rayLib.getScreenHeight())) - 10.0),
+//         //         .dark_blue,
+//         //     );
+//         //     list[0] = ground1;
+//         //     list[1] = ground2;
+//         //     list[2] = water;
+//         //     return list;
+//         // }
+//     };
+// }
+
+const C_EMPTY_SPACE: u8 = '.';
+const C_GROUND: u8 = '#';
+const C_WATER: u8 = '~';
+const C_WALL: u8 = '|';
+const C_SPILES: u8 = '^';
+const C_HORRIZONTAL_PLATFORM: u8 = '_';
+const C_CHECK_POINT: u8 = 'C';
+const WATER_HEIGHT = 5.0;
+const SPIKE_HEIGHT = 5.0;
+pub const LevelBluePrintMappingObjectTypes = enum(u8) {
+    EMPTY_SPACE,
+    GROUND,
+    WATER,
+    WALL,
+    SPIKES,
+    HORRIZONTAL_PLATFORMS,
+    CHECK_POINT,
+
+    pub fn charToId(char: u8) u8 {
+        return switch (char) {
+            C_EMPTY_SPACE => 0,
+            C_GROUND => 1,
+            C_WATER => 2,
+            C_WALL => 3,
+            C_SPILES => 4,
+            C_HORRIZONTAL_PLATFORM => 5,
+            C_CHECK_POINT => 6,
+            else => 0,
         };
     }
-    pub fn deinit(self: *Self) void {
-        self.allocator.free(self.staticPlatforms);
-        self.dynamicPlatForms.deinit(self.allocator);
-        self.enemies.deinit(self.allocator);
-    }
-    pub fn getRect(self: Self) Rectangle {
-        return self.rect;
+    pub fn idToChar(id: usize) u8 {
+        return switch (id) {
+            0 => C_EMPTY_SPACE,
+            1 => C_GROUND,
+            2 => C_WATER,
+            3 => C_WALL,
+            4 => C_SPILES,
+            5 => C_HORRIZONTAL_PLATFORM,
+            6 => C_CHECK_POINT,
+            else => C_EMPTY_SPACE,
+        };
     }
 };
 
-pub fn World(comptime totalLevels: usize) type {
-    return struct {
-        const Self = @This();
-        allocator: std.mem.Allocator,
-        // levels: [totalLevels]Level,
-        rect: Rectangle,
+pub const ObjectProperties = struct {
+    const Self = @This();
+    objectType: LevelBluePrintMappingObjectTypes,
+    bounce: bool = false,
+    bounceAmount: f32 = 0.0,
+    freeze: bool = false,
+    instaKill: bool = false,
+    slippery: bool = false,
+    damage: ?DamageComponent = null,
 
-        pub fn init(allocator: std.mem.Allocator) !*Self {
-            const self = try allocator.create(Self);
-            self.allocator = allocator;
-            var worldSize: f32 = 0;
-            inline for (0..totalLevels) |i| {
-                self.levels[i] = try self.buildLevel(i);
-                worldSize += self.levels[i].getRect().getWidth();
-            }
-            self.rect = Rectangle.init(
-                .{ .WORLD = 0 },
-                3000.0,
-                Utils.floatFromInt(f32, rayLib.getScreenHeight()),
-                rayLib.Vector2.init(0, 0),
-                rayLib.Color.init(0, 0, 0, 0),
-            );
-            return self;
-        }
-        pub fn deinit(self: *Self) void {
-            // for (0..totalLevels) |value| {
-            //     self.levels[value].deinit();
-            // }
-            self.allocator.destroy(self);
-        }
-        pub fn getRect(self: Self) Rectangle {
-            return self.rect;
-        }
-        // fn buildLevel(self: *Self, index: usize) !Level {
-        // const platCount: usize = switch (index) {
-        //     0 => 8,
-        //     1 => 3,
-        //     else => 0,
-        // };
-        // if (index == 0) {
-        //     return Level.init(self.allocator, try self.createLevel0(platCount), Rectangle.init(
-        //         .{ .LEVEL = .STANDARD },
-        //         1500.0,
-        //         Utils.floatFromInt(f32, rayLib.getScreenWidth()),
-        //         rayLib.Vector2.init(0.0, 0.0),
-        //         rayLib.Color.init(0, 0, 0, 0),
-        //     ));
-        // } else {
-        //     const previousLevel = &self.levels[index - 1];
-        //     const previousPlatform = previousLevel.staticPlatforms[previousLevel.staticPlatforms.len - 1].getRect();
-        //     return Level.init(self.allocator, try self.createLevel1(platCount, previousPlatform), Rectangle.init(
-        //         .{ .LEVEL = .STANDARD },
-        //         1500.0,
-        //         Utils.floatFromInt(f32, rayLib.getScreenWidth()),
-        //         rayLib.Vector2.init(previousLevel.getRect().getRightEdge() + 1.0, 0.0),
-        //         rayLib.Color.init(0, 0, 0, 0),
-        //     ));
-        // }
-        // }
-        // fn createLevel0(self: *Self, count: usize) ![]Platform {
-        //     var list = try self.allocator.alloc(Platform, count);
-        //     const ground = Platform.init(
-        //         PLATFORM_TYPES.GROUND,
-        //         300.0,
-        //         100.0,
-        //         rayLib.Vector2.init(0.0, @as(f32, @floatFromInt(rayLib.getScreenHeight())) - 50.0 / 2),
-        //         .brown,
-        //     );
-        //     const ground2 = Platform.init(
-        //         PLATFORM_TYPES.GROUND,
-        //         300.0,
-        //         100.0,
-        //         rayLib.Vector2.init(ground.rect.getRightEdge(), @as(f32, @floatFromInt(rayLib.getScreenHeight())) - 50.0 / 2.0),
-        //         .brown,
-        //     );
-        //     const water = Platform.init(
-        //         PLATFORM_TYPES.WATER,
-        //         500.0,
-        //         100.0,
-        //         rayLib.Vector2.init(ground2.rect.getRightEdge(), @as(f32, @floatFromInt(rayLib.getScreenHeight())) - 10.0),
-        //         .dark_blue,
-        //     );
-        //     const verticalPlatform = Platform.init(
-        //         PLATFORM_TYPES.VERTICAL,
-        //         200.0,
-        //         50.0,
-        //         rayLib.Vector2.init(100.0, 400.0),
-        //         .green,
-        //     );
-        //     const verticalPlatform0 = Platform.init(
-        //         PLATFORM_TYPES.VERTICAL,
-        //         200.0,
-        //         50.0,
-        //         rayLib.Vector2.init(300.0, 300.0),
-        //         .green,
-        //     );
-        //     const icePlatform = Platform.init(
-        //         PLATFORM_TYPES.ICE,
-        //         200.0,
-        //         50.0,
-        //         rayLib.Vector2.init(500.0, 200.0),
-        //         .white,
-        //     );
-        //     const verticalPlatform1 = Platform.init(
-        //         PLATFORM_TYPES.GRASS,
-        //         1000,
-        //         50.0,
-        //         rayLib.Vector2.init(icePlatform.rect.getRightEdge(), 500.0),
-        //         .green,
-        //     );
-        //     const ver2 = Platform.init(
-        //         PLATFORM_TYPES.WALL,
-        //         100,
-        //         200,
-        //         rayLib.Vector2.init(400.0, 375.0),
-        //         .green,
-        //     );
-        //     list[0] = ground;
-        //     list[1] = ground2;
-        //     list[2] = water;
-        //     list[3] = verticalPlatform;
-        //     list[4] = ver2;
-        //     list[5] = verticalPlatform0;
-        //     list[6] = icePlatform;
-        //     list[7] = verticalPlatform1;
-        //     // list[7] = ver2;
-        //     return list;
-        // }
-        // fn createLevel1(self: *Self, count: usize, lastPlatformPosition: Rectangle) ![]Platform {
-        //     var list = try self.allocator.alloc(Platform, count);
-        //     const ground1 = Platform.init(
-        //         PLATFORM_TYPES.GROUND,
-        //         300.0,
-        //         100.0,
-        //         rayLib.Vector2.init(lastPlatformPosition.getRightEdge(), @as(f32, @floatFromInt(rayLib.getScreenHeight())) - 50.0 / 2.0),
-        //         .red,
-        //     );
-        //     const ground2 = Platform.init(
-        //         PLATFORM_TYPES.GROUND,
-        //         300.0,
-        //         100.0,
-        //         rayLib.Vector2.init(ground1.getRect().getRightEdge(), @as(f32, @floatFromInt(rayLib.getScreenHeight())) - 50.0 / 2.0),
-        //         .red,
-        //     );
-        //     const water = Platform.init(
-        //         PLATFORM_TYPES.WATER,
-        //         500.0,
-        //         100.0,
-        //         rayLib.Vector2.init(ground2.rect.getRightEdge(), @as(f32, @floatFromInt(rayLib.getScreenHeight())) - 10.0),
-        //         .dark_blue,
-        //     );
-        //     list[0] = ground1;
-        //     list[1] = ground2;
-        //     list[2] = water;
-        //     return list;
-        // }
-    };
-}
+    pub fn init(
+        objectType: LevelBluePrintMappingObjectTypes,
+        bounce: bool,
+        bounceAmount: f32,
+        freeze: bool,
+        instaKill: bool,
+        slippery: bool,
+        damage: ?DamageComponent,
+    ) Self {
+        return .{
+            .objectType = objectType,
+            .bounce = bounce,
+            .bounceAmount = bounceAmount,
+            .freeze = freeze,
+            .instaKill = instaKill,
+            .slippery = slippery,
+            .damage = damage,
+        };
+    }
+};
 
-pub fn World2(comptime totalLevels: usize, currentLevel: usize) type {
+const DamageComponent = struct {
+    const Self = @This();
+    damageAmount: f32 = 0.0,
+    damageOverTime: bool = false,
+
+    pub fn init(damageAmount: f32, damageOverTime: bool) Self {
+        return .{
+            .damageAmount = damageAmount,
+            .damageOverTime = damageOverTime,
+        };
+    }
+};
+
+pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
     return struct {
         const Self = @This();
         const TILE_SIZE: usize = 32;
+        const TILE_SIZE_F32 = 32.0;
         ///The Blueprints (Shared across all instances)
         ///
         ///Each . represents a row so each char(.,~,|,_,^,ETC) represends a cell in that row
@@ -486,9 +575,9 @@ pub fn World2(comptime totalLevels: usize, currentLevel: usize) type {
                 ".....|...................|.....................", // 12
                 ".....|...................|.....................",
                 ".....|...................|.....................",
+                ".....|....___............|.....................",
+                "...............................................",
                 ".....|...................|.....................",
-                "..........___..................................",
-                "P....|...................|.....................",
                 "###############~~~~~###########################", // 18
             },
             .{
@@ -526,6 +615,7 @@ pub fn World2(comptime totalLevels: usize, currentLevel: usize) type {
         activeMap: [ROWS * WORLD_PIXEL_WIDTH]u8 = undefined,
         enemies: std.ArrayList(*Enemy),
         dynamicPlatforms: std.ArrayList(*Platform),
+        levelObjectProperties: std.AutoHashMap(u8, ObjectProperties) = undefined,
 
         pub fn init(allocator: std.mem.Allocator) !*Self {
             const self = try allocator.create(Self);
@@ -540,25 +630,28 @@ pub fn World2(comptime totalLevels: usize, currentLevel: usize) type {
                     rayLib.Vector2.init(0.0, 0.0),
                     rayLib.Color.init(0, 0, 0, 0),
                 ),
+                .levelObjectProperties = std.AutoHashMap(u8, ObjectProperties).init(allocator),
             };
+            try self.setLevelObjectProperties();
             try self.loadLevel(currentLevel);
             return self;
         }
         pub fn deinit(self: *Self) void {
             self.dynamicPlatforms.deinit(self.allocator);
             self.enemies.deinit(self.allocator);
+            self.levelObjectProperties.deinit();
             self.allocator.destroy(self);
         }
-        pub fn getRect(self: Self) Rectangle {
+        pub fn getRect(self: *Self) Rectangle {
             return self.rect;
         }
-        pub fn getLevelIndex(self: Self) usize {
+        pub fn getLevelIndex(self: *Self) usize {
             return self.currentLevelIndex;
         }
         pub fn setLevelIndex(self: *Self, levelIndex: usize) void {
             self.currentLevelIndex = levelIndex;
         }
-        pub fn getLevelWidth(_: Self) f32 {
+        pub fn getLevelWidth(_: *Self) f32 {
             return Utils.floatFromInt(f32, LEVEL_WIDTH);
         }
         pub fn loadLevel(self: *Self, levelIndex: usize) !void {
@@ -570,7 +663,7 @@ pub fn World2(comptime totalLevels: usize, currentLevel: usize) type {
                 for (0..COLUMNS_PER_LEVEL) |col| {
                     const gridCharacterLocation = currentLevelBluePrint[row][col];
                     const index = row * COLUMNS_PER_LEVEL + col;
-                    self.activeMap[index] = charToId(gridCharacterLocation);
+                    self.activeMap[index] = LevelBluePrintMappingObjectTypes.charToId(gridCharacterLocation);
                     //TODO: FIGURE OUT HOW TO RESET PLAYER RESPAWN
                     // if (char == 'P' and self.currentLevelIndex == 0) {
                     //     // Global spawn logic
@@ -583,22 +676,34 @@ pub fn World2(comptime totalLevels: usize, currentLevel: usize) type {
                 }
             }
         }
+        pub fn draw(self: *Self) void {
+            // 1. Draw the level the player is currently in
+            drawLevelBluePrintByIndex(self.currentLevelIndex);
+            // 2. Draw the NEXT level so there is no gap when looking ahead
+            if (self.currentLevelIndex < totalLevels - 1) {
+                drawLevelBluePrintByIndex(self.currentLevelIndex + 1);
+            }
+            // 3. Draw the PREVIOUS level so there is no gap when looking back
+            if (self.currentLevelIndex > 0) {
+                drawLevelBluePrintByIndex(self.currentLevelIndex - 1);
+            }
+        }
         pub fn getTilesAt(self: *Self, playerX: f32, playerY: f32) u8 {
             // 1. Determine which level index this X coordinate belongs to
             // Example: 1600 / 1504 = 1.06 -> Index 1
-            const level_idx = @as(i32, @intFromFloat(playerX / @as(f32, @floatFromInt(LEVEL_WIDTH))));
+            const levelIndex = @as(i32, @intFromFloat(playerX / @as(f32, @floatFromInt(LEVEL_WIDTH))));
 
             // 2. Safety: If outside the entire world bounds, return empty (0)
-            if (level_idx < 0 or level_idx >= totalLevels) return 0;
-            const u_level_idx = @as(usize, @intCast(level_idx));
+            if (levelIndex < 0 or levelIndex >= totalLevels) return 0;
+            const u_level_idx = @as(usize, @intCast(levelIndex));
 
             // 3. Calculate "Local X" (0 to 1503) within that specific level
             const global_x_offset = @as(f32, @floatFromInt(u_level_idx * LEVEL_WIDTH));
             const local_x = playerX - global_x_offset;
 
             // 4. Convert Local X and World Y to Grid Coordinates (0-46 and 0-18)
-            const col = @as(i32, @intFromFloat(local_x / @as(f32, @floatFromInt(TILE_SIZE))));
-            const row = @as(i32, @intFromFloat(playerY / @as(f32, @floatFromInt(TILE_SIZE))));
+            const col = @as(i32, @intFromFloat(local_x / TILE_SIZE_F32));
+            const row = @as(i32, @intFromFloat(playerY / TILE_SIZE_F32));
 
             // 5. Safety: Grid boundary check
             if (col < 0 or col >= COLUMNS_PER_LEVEL or row < 0 or row >= ROWS) return 0;
@@ -614,19 +719,7 @@ pub fn World2(comptime totalLevels: usize, currentLevel: usize) type {
             } else {
                 // Character lookup from the constant strings
                 const char = BLUEPRINTS[u_level_idx][u_row][u_col];
-                return charToId(char);
-            }
-        }
-        pub fn draw(self: *Self) void {
-            // 1. Draw the level the player is currently in
-            drawBlueprint(self.currentLevelIndex);
-            // 2. Draw the NEXT level so there is no gap when looking ahead
-            if (self.currentLevelIndex < totalLevels - 1) {
-                drawBlueprint(self.currentLevelIndex + 1);
-            }
-            // 3. Draw the PREVIOUS level so there is no gap when looking back
-            if (self.currentLevelIndex > 0) {
-                drawBlueprint(self.currentLevelIndex - 1);
+                return LevelBluePrintMappingObjectTypes.charToId(char);
             }
         }
         pub fn isSolid(self: *Self, x: f32, y: f32) bool {
@@ -634,55 +727,103 @@ pub fn World2(comptime totalLevels: usize, currentLevel: usize) type {
             // IDs: 1 (Ground), 3 (Wall), 5 (Platform) are solid
             return (id == 1 or id == 3 or id == 5);
         }
-        // 3. New Helper to draw ANY blueprint by index
-        fn drawBlueprint(levelIndex: usize) void {
-            const blueprint = BLUEPRINTS[levelIndex];
-            const global_x_offset = @as(f32, @floatFromInt(levelIndex * LEVEL_WIDTH));
-            const tileSize = @as(f32, @floatFromInt(TILE_SIZE));
-            for (0..ROWS) |y| {
-                for (0..COLUMNS_PER_LEVEL) |x| {
-                    const id = charToId(blueprint[y][x]);
-                    if (id == 0) continue;
-                    const posX = (@as(f32, @floatFromInt(x)) * tileSize) + global_x_offset;
-                    const posY = @as(f32, @floatFromInt(y)) * tileSize;
-                    drawTiles(id, posX, posY, tileSize);
+        pub fn getObjectProperties(self: *Self, key: u8) ?ObjectProperties {
+            if (self.levelObjectProperties.get(key)) |component| {
+                return component;
+            }
+            return null;
+        }
+        fn setLevelObjectProperties(self: *Self) !void {
+            const levelTileTypes = [5]u8{
+                LevelBluePrintMappingObjectTypes.charToId(C_GROUND),
+                LevelBluePrintMappingObjectTypes.charToId(C_WATER),
+                LevelBluePrintMappingObjectTypes.charToId(C_WALL),
+                LevelBluePrintMappingObjectTypes.charToId(C_SPILES),
+                LevelBluePrintMappingObjectTypes.charToId(C_HORRIZONTAL_PLATFORM),
+            };
+            for (levelTileTypes) |key| {
+                switch (key) {
+                    1 => try self.levelObjectProperties.put(key, ObjectProperties.init(
+                        LevelBluePrintMappingObjectTypes.GROUND,
+                        false,
+                        0,
+                        false,
+                        false,
+                        false,
+                        DamageComponent.init(
+                            0,
+                            false,
+                        ),
+                    )),
+                    2 => try self.levelObjectProperties.put(key, ObjectProperties.init(
+                        LevelBluePrintMappingObjectTypes.WATER,
+                        true,
+                        10.0,
+                        false,
+                        false,
+                        false,
+                        DamageComponent.init(
+                            10.0,
+                            true,
+                        ),
+                    )),
+                    3 => try self.levelObjectProperties.put(key, ObjectProperties.init(
+                        LevelBluePrintMappingObjectTypes.WALL,
+                        false,
+                        0,
+                        false,
+                        false,
+                        false,
+                        null,
+                    )),
+                    4 => try self.levelObjectProperties.put(key, ObjectProperties.init(
+                        LevelBluePrintMappingObjectTypes.SPIKES,
+                        true,
+                        10.0,
+                        false,
+                        false,
+                        false,
+                        DamageComponent.init(
+                            10.0,
+                            true,
+                        ),
+                    )),
+                    5 => try self.levelObjectProperties.put(key, ObjectProperties.init(
+                        LevelBluePrintMappingObjectTypes.HORRIZONTAL_PLATFORMS,
+                        false,
+                        0,
+                        false,
+                        false,
+                        false,
+                        null,
+                    )),
+                    else => {},
+                }
+            }
+        }
+        fn drawLevelBluePrintByIndex(levelIndex: usize) void {
+            const currentLevelBluePrint = BLUEPRINTS[levelIndex];
+            const globalXOffset = Utils.floatFromInt(f32, levelIndex * LEVEL_WIDTH);
+            for (0..ROWS) |row| {
+                for (0..COLUMNS_PER_LEVEL) |col| {
+                    const gridCharacterId = LevelBluePrintMappingObjectTypes.charToId(currentLevelBluePrint[row][col]);
+                    if (gridCharacterId == 0) continue;
+                    const posX = (Utils.floatFromInt(f32, col) * TILE_SIZE_F32) + globalXOffset;
+                    const posY = Utils.floatFromInt(f32, row) * TILE_SIZE_F32;
+                    drawTiles(gridCharacterId, posX, posY, TILE_SIZE_F32);
                 }
             }
         }
         fn drawTiles(id: usize, posX: f32, posY: f32, size: f32) void {
-            // std.debug.print("X: {d} Y: {d}\n", .{ posX, posY });
             switch (id) {
                 1 => rayLib.drawRectangleV(.{ .x = posX, .y = posY }, .{ .x = size, .y = size }, rayLib.Color.brown),
-                2 => rayLib.drawRectangleV(.{ .x = posX, .y = posY }, .{ .x = size, .y = size }, rayLib.Color.blue),
+                2 => rayLib.drawRectangleV(.{ .x = posX, .y = posY + WATER_HEIGHT }, .{ .x = size, .y = size }, rayLib.Color.blue),
                 3 => rayLib.drawRectangleV(.{ .x = posX, .y = posY }, .{ .x = size, .y = size }, rayLib.Color.green),
-                4 => rayLib.drawRectangleV(.{ .x = posX, .y = posY }, .{ .x = size, .y = size }, rayLib.Color.red),
+                4 => rayLib.drawRectangleV(.{ .x = posX, .y = posY + SPIKE_HEIGHT }, .{ .x = size, .y = size }, rayLib.Color.red),
                 5 => rayLib.drawRectangleV(.{ .x = posX, .y = posY }, .{ .x = size, .y = size }, rayLib.Color.green),
                 6 => rayLib.drawRectangleV(.{ .x = posX, .y = posY }, .{ .x = size, .y = size }, rayLib.Color.gold),
                 else => {},
             }
-        }
-        fn charToId(char: u8) u8 {
-            return switch (char) {
-                '.' => 0, // Empty space / Sky
-                '#' => 1, // Ground
-                '~' => 2, // Water
-                '|' => 3, // Pillar
-                '^' => 4, // Spikes
-                '_' => 5, // horrizontal
-                'C' => 6, // chekpoint
-                else => 0,
-            };
-        }
-        fn idToChar(id: usize) u8 {
-            return switch (id) {
-                0 => '.', // Empty space
-                1 => '#', // Ground
-                2 => '~', // Water
-                3 => '|', // Wall
-                4 => '^', // Spikes
-                5 => '_', // Horrizontal
-                6 => 'C', // Checkpoint
-            };
         }
     };
 }

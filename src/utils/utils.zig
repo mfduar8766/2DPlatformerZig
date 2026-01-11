@@ -857,9 +857,9 @@ pub fn isNegativeNumber(int: anytype) bool {
     return std.math.signbit(int);
 }
 
-///Converts - to + or + to -
+///Converts NEGATIVE to POSITIVE or POSITIVE to NEGATIVE
 ///
-/// Example .NEGATVE will convert to +
+/// Example .NEGATVE will convert to + and .POSITIVE will convert to -
 pub fn convertSigns(signConversion: SIGN_CONVERSION, int: anytype) @TypeOf(int) {
     if (signConversion == .NEGATIVE) {
         return std.math.copysign(int, 1.0);

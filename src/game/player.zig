@@ -9,12 +9,13 @@ const VELOCITY = @import("../types.zig").VELOCITY;
 const Utils = @import("../utils/utils.zig");
 const Config = @import("./game.zig").Config;
 const POSITION = @import("../types.zig").POSITION;
+const ObjectProperties = @import("world.zig").ObjectProperties;
 
 pub const Player = struct {
     const Self = @This();
     allocator: std.mem.Allocator,
     rect: Rectangle,
-    jumpHeight: f32 = -200.0,
+    jumpHeight: f32 = -100.0,
     speedMultiplier: f32 = 2.0,
     jumpMultiplier: f32 = 2.0,
     fallingSpeed: f32 = 100.0,
@@ -73,7 +74,6 @@ pub const Player = struct {
             self.rect.subtractPosition(.X, self.velocityX * self.speedMultiplier * dt);
             self.checkBounds(DIRECTION.LEFT, worldBounds);
         }
-
         if (rayLib.isKeyPressed(rayLib.KeyboardKey.w) and self.onGround) {
             self.velocityY = self.jumpHeight; //* self.jumpMultiplier;
             self.onGround = false;
@@ -109,12 +109,14 @@ pub const Player = struct {
     }
     pub fn setIsFalling(self: *Self, value: bool) void {
         self.isFalling = value;
+        self.onGround = false;
     }
     pub fn getIsFalling(self: Self) bool {
         return self.isFalling;
     }
     pub fn setIsOnGround(self: *Self, value: bool) void {
         self.onGround = value;
+        self.isFalling = false;
     }
     pub fn getIsOnGround(self: Self) bool {
         return self.onGround;
@@ -131,25 +133,20 @@ pub const Player = struct {
         }
         return self.velocityY;
     }
-    pub fn applyDamage(self: *Self, dt: f32, position: POSITION, otherRect: Rectangle) void {
-        // self.velocityY = self.damageBounce;
-        // self.velocityY += GRAVITY * dt;
-        // self.rect.addPosition(.Y, self.velocityY * dt);
-        // self.rect.subtractPosition(.X, self.velocityX * dt);
-        // self.onGround = false;
-
-        const damage = otherRect.damage.damageAmount;
-        const effects = otherRect.effects;
+    pub fn applyDamage(self: *Self, dt: f32, position: POSITION, properties: ObjectProperties) void {
+        const damage = if (properties.damage != null) properties.damage.?.damageAmount else 0.0;
         self.setDamage(damage);
-        if (effects.bounce) {
+        if (properties.bounce) {
             if (position == .X) {} else {
-                self.velocityY = if (Utils.isNegativeNumber(effects.bounceAmount)) effects.bounceAmount else Utils.convertSigns(.POSITIVE, effects.bounceAmount);
+                self.velocityY = if (Utils.isNegativeNumber(properties.bounceAmount)) properties.bounceAmount else Utils.convertSigns(
+                    .POSITIVE,
+                    properties.bounceAmount,
+                );
                 self.velocityY += GRAVITY * dt;
                 self.rect.addPosition(.Y, self.velocityY * dt);
                 self.rect.subtractPosition(.X, self.velocityX * dt);
-                self.onGround = false;
             }
-        } else if (effects.freeze) {} else if (effects.instaKill) {} else if (effects.slippery) {}
+        } else if (properties.freeze) {} else if (properties.instaKill) {} else if (properties.slippery) {}
     }
     pub fn startFalling(self: *Self, dt: f32) void {
         self.onGround = false;
@@ -157,6 +154,7 @@ pub const Player = struct {
         self.velocityY += GRAVITY * dt;
         self.rect.addPosition(.Y, self.velocityY * dt);
         self.isFalling = true;
+        self.onGround = false;
     }
     pub fn reset(self: *Self) void {
         self.velocityX = 0.0;
