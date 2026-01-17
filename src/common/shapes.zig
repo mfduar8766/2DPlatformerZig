@@ -76,9 +76,11 @@ pub const Rectangle = struct {
             self.color,
         );
     }
+    ///self.rect.height
     pub fn getHeight(self: Self) f32 {
         return self.rect.height;
     }
+    ///self.rect.width
     pub fn getWidth(self: Self) f32 {
         return self.rect.width;
     }
@@ -125,12 +127,16 @@ pub const Rectangle = struct {
         return self.rect.y + self.rect.height;
     }
     ///This is the top of the rectangle or the acual surface where the player can walk on position Y
+    ///
+    ///self.rect.y
     pub fn getTopEdge(self: Self) f32 {
         return self.rect.y;
     }
+    ///self.getPosition().y + (self.rect.height / 2)
     pub fn getCenterY(self: Self) f32 {
         return self.getPosition().y + (self.rect.height / 2);
     }
+    ///self.getPosition().x + (self.getWidth() / 2.0)
     pub fn getCenterX(self: Self) f32 {
         return self.getPosition().x + (self.getWidth() / 2.0);
     }
@@ -143,10 +149,14 @@ pub const Rectangle = struct {
     /// Anything with an X-coordinate less than 500 is to the left of that edge.
     ///
     ///Anything with an X-coordinate greater than 500 has moved past the rectangle.
+    ///
+    /// self.rect.x + self.rect.width
     pub fn getRightEdge(self: Self) f32 {
         return self.rect.x + self.rect.width;
     }
     ///This retuns the left side of the rectangle position X
+    ///
+    /// self.rect.x
     pub fn getLeftEdge(self: Self) f32 {
         return self.rect.x;
     }

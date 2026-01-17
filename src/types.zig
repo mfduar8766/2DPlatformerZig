@@ -128,4 +128,6 @@ pub const COLLISION_TYPES = enum(u8) {
     HEAD_BUMP = 0,
     FALLING = 1,
     WALL = 3,
+    PLATFORM = 4,
+    HORRIZONTAL = 5,
 };

@@ -26,7 +26,6 @@ pub const Player = struct {
     velocityY: f32 = 0.0,
     playerState: PLAYER_STATE = .ALIVE, // BEFORE THIS WAS A BOOL onGround SHOULD I KEEP A BOOL OR A ENUM? ENUM SEEMS TO BE MORE WORK
     // jumpStartTime: f64 = 0.0,
-    damageBounce: f32 = -100.0,
     spped: f32 = 100.0,
     canSwim: bool = false,
     onGround: bool = true,
@@ -77,6 +76,7 @@ pub const Player = struct {
         if (rayLib.isKeyPressed(rayLib.KeyboardKey.w) and self.onGround) {
             self.velocityY = self.jumpHeight; //* self.jumpMultiplier;
             self.onGround = false;
+            self.isFalling = true;
             // self.jumpStartTime = rayLib.getTime();
         }
         if (!self.onGround) {
@@ -116,7 +116,11 @@ pub const Player = struct {
     }
     pub fn setIsOnGround(self: *Self, value: bool) void {
         self.onGround = value;
-        self.isFalling = false;
+        if (!value) {
+            self.isFalling = true;
+        } else {
+            self.isFalling = false;
+        }
     }
     pub fn getIsOnGround(self: Self) bool {
         return self.onGround;
