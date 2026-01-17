@@ -7,13 +7,13 @@ const Utils = @import("../utils/utils.zig");
 const Rectangle = @import("../common/shapes.zig").Rectangle;
 const LEVEL_TYPEs = @import("../types.zig").LEVEL_TYPES;
 
-const C_EMPTY_SPACE: u8 = '.';
-const C_GROUND: u8 = '#';
-const C_WATER: u8 = '~';
-const C_WALL: u8 = '|';
-const C_SPILES: u8 = '^';
-const C_HORRIZONTAL_PLATFORM: u8 = '_';
-const C_CHECK_POINT: u8 = 'C';
+const CHAR_EMPTY_SPACE: u8 = '.';
+const CHAR_GROUND: u8 = '#';
+const CHAR_WATER: u8 = '~';
+const CHAR_WALL: u8 = '|';
+const CHAR_SPILES: u8 = '^';
+const CHAR_HORRIZONTAL_PLATFORM: u8 = '_';
+const CHAR_CHECK_POINT: u8 = 'C';
 const WATER_HEIGHT = 5.0;
 const SPIKE_HEIGHT = 5.0;
 pub const LevelBluePrintMappingObjectTypes = enum(u8) {
@@ -27,26 +27,26 @@ pub const LevelBluePrintMappingObjectTypes = enum(u8) {
 
     pub fn charToId(char: u8) u8 {
         return switch (char) {
-            C_EMPTY_SPACE => 0,
-            C_GROUND => 1,
-            C_WATER => 2,
-            C_WALL => 3,
-            C_SPILES => 4,
-            C_HORRIZONTAL_PLATFORM => 5,
-            C_CHECK_POINT => 6,
+            CHAR_EMPTY_SPACE => 0,
+            CHAR_GROUND => 1,
+            CHAR_WATER => 2,
+            CHAR_WALL => 3,
+            CHAR_SPILES => 4,
+            CHAR_HORRIZONTAL_PLATFORM => 5,
+            CHAR_CHECK_POINT => 6,
             else => 0,
         };
     }
     pub fn idToChar(id: usize) u8 {
         return switch (id) {
-            0 => C_EMPTY_SPACE,
-            1 => C_GROUND,
-            2 => C_WATER,
-            3 => C_WALL,
-            4 => C_SPILES,
-            5 => C_HORRIZONTAL_PLATFORM,
-            6 => C_CHECK_POINT,
-            else => C_EMPTY_SPACE,
+            0 => CHAR_EMPTY_SPACE,
+            1 => CHAR_GROUND,
+            2 => CHAR_WATER,
+            3 => CHAR_WALL,
+            4 => CHAR_SPILES,
+            5 => CHAR_HORRIZONTAL_PLATFORM,
+            6 => CHAR_CHECK_POINT,
+            else => CHAR_EMPTY_SPACE,
         };
     }
 };
@@ -288,11 +288,11 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
         }
         fn setLevelObjectProperties(self: *Self) !void {
             const levelTileTypes = [5]u8{
-                LevelBluePrintMappingObjectTypes.charToId(C_GROUND),
-                LevelBluePrintMappingObjectTypes.charToId(C_WATER),
-                LevelBluePrintMappingObjectTypes.charToId(C_WALL),
-                LevelBluePrintMappingObjectTypes.charToId(C_SPILES),
-                LevelBluePrintMappingObjectTypes.charToId(C_HORRIZONTAL_PLATFORM),
+                LevelBluePrintMappingObjectTypes.charToId(CHAR_GROUND),
+                LevelBluePrintMappingObjectTypes.charToId(CHAR_WATER),
+                LevelBluePrintMappingObjectTypes.charToId(CHAR_WALL),
+                LevelBluePrintMappingObjectTypes.charToId(CHAR_SPILES),
+                LevelBluePrintMappingObjectTypes.charToId(CHAR_HORRIZONTAL_PLATFORM),
             };
             for (levelTileTypes) |key| {
                 switch (key) {
