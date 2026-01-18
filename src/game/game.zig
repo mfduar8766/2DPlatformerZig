@@ -1,19 +1,17 @@
 const std = @import("std");
 const rayLib = @import("raylib");
 const Player = @import("./player.zig").Player;
-const Platform = @import("./platforms.zig").Platform;
 const Rectangle = @import("../common/shapes.zig").Rectangle;
 const GAME_OBJECT_TYPES = @import("../types.zig").GAME_OBJECT_TYPES;
-const PLATFORM_TYPES = @import("../types.zig").PLATFORM_TYPES;
 const GRAVITY = @import("../types.zig").GRAVITY;
-const PLAYER_STATE = @import("../types.zig").PLAYER_STATE;
 const Utils = @import("../utils/utils.zig");
 const POSITION = @import("../types.zig").POSITION;
 const COLLISION_TYPES = @import("../types.zig").COLLISION_TYPES;
 const DIRECTION = @import("../types.zig").DIRECTION;
 const World = @import("./world.zig").World;
-const ObjectProperties = @import("./world.zig").ObjectProperties;
+const ObjectProperties = @import("../common/objectProperties.zig").ObjectProperties;
 const LevelBluePrintMappingObjectTypes = @import("./world.zig").LevelBluePrintMappingObjectTypes;
+const Widgets = @import("./widgets.zig").Widgets;
 
 pub const Config = struct {
     const Self = @This();
@@ -29,32 +27,6 @@ pub const Config = struct {
             .windowWidth = 800,
             .windowTitle = "Game",
         };
-    }
-};
-
-const Widgets = struct {
-    const Self = @This();
-    healthBarRect: Rectangle = Rectangle.init(
-        GAME_OBJECT_TYPES{ .UI = .HEALTH_BAR },
-        100.0,
-        15,
-        rayLib.Vector2.init(10.0, 10.0),
-        .red,
-    ),
-    staminaBarRect: Rectangle = Rectangle.init(
-        GAME_OBJECT_TYPES{ .UI = .STAMINA_BAR },
-        100.0,
-        15,
-        rayLib.Vector2.init(10.0, 30.0),
-        .green,
-    ),
-
-    pub fn init() Self {
-        return .{};
-    }
-    pub fn draw(self: *Self) void {
-        self.healthBarRect.draw();
-        self.staminaBarRect.draw();
     }
 };
 
@@ -101,6 +73,7 @@ pub const Game = struct {
             .rotation = 0.0,
             .zoom = 2.0, // impacts how much of the world if visible. Since my world is 32x32 a zoom of 1 is to much
         };
+        // std.debug.print("LLL: {any}\n", .{@intFromEnum(LevelBluePrintMappingObjectTypes.GROUND)});
         while (!rayLib.windowShouldClose()) {
             const dt = rayLib.getFrameTime();
             try self.update(dt);
@@ -128,8 +101,8 @@ pub const Game = struct {
     }
     fn checkForCollisions(self: *Self, dt: f32) void {
         const rect = self.player.getRect();
-        const p_x = rect.getPosition().x;
-        const p_y = rect.getPosition().y;
+        const pX = rect.getPosition().x;
+        const pY = rect.getPosition().y;
         const margin: f32 = 2.0;
         const pRightEdge = rect.getRightEdge();
         const pBottomEdge = rect.getBottomEdge();
@@ -138,24 +111,29 @@ pub const Game = struct {
         const pTopEdge = rect.getTopEdge();
 
         // 1. Get tile IDs at critical points
-        const topLeft = self.world.getTilesAt(p_x + margin, p_y);
-        const topRight = self.world.getTilesAt(pRightEdge - margin, p_y);
-        const bottomLeft = self.world.getTilesAt(p_x + margin, pBottomEdge);
-        const bottomRight = self.world.getTilesAt(pRightEdge - margin, pBottomEdge);
-        const middleLeft = self.world.getTilesAt(p_x, p_y + (pH / 2));
-        const middleRight = self.world.getTilesAt(pRightEdge, p_y + (pH / 2));
-        const vel_y = self.player.getVelocity(.Y);
-        // const velX = self.player.getVelocity(.X);
-        // std.debug.print("velY: {d} playerLeft: {d} playerRight: {d} mL: {d} mR: {d}\n", .{
-        //     vel_y,
-        //     rect.getLeftEdge(),
-        //     pRightEdge,
-        //     middleLeft,
-        //     middleRight,
-        // });
+        // const topLeft = self.world.getTilesAt(pX + margin, pY);
 
+        //For Ceiling/Head-Bump Detection:
+        //You want to look slightly above the player to see if they are about to hit something.
+        //Code snippet
+        const topLeftCeil = self.world.getTilesAt(pX + margin, pY - 1.0);
+
+        //For Wall Detection (while moving):
+        //You want to look slightly inside the player's height so you don't accidentally detect the floor as a wall.
+        // const topLeftWall = self.world.getTilesAt(p_x + margin, p_y + 2.0);
+        const topRight = self.world.getTilesAt(pRightEdge - margin, pY);
+        const bottomLeft = self.world.getTilesAt(pX + margin, pBottomEdge);
+        const bottomRight = self.world.getTilesAt(pRightEdge - margin, pBottomEdge);
+        const middleLeft = self.world.getTilesAt(pX, pY + (pH / 2));
+        const middleRight = self.world.getTilesAt(pRightEdge, pY + (pH / 2));
+        const velY = self.player.getVelocity(.Y);
+        const velX = self.player.getVelocity(.X);
+
+        if (velX > 0.0 and 0.0 == velY) {
+            self.checkCollisionEnemies(dt, pLeftEdge, pRightEdge, .X);
+        }
         // --- VERTICAL COLLISIONS (Falling) ---
-        if (vel_y >= 0.0) {
+        else if (velY >= 0.0) {
             // Find the top edge of the tile grid row the feet are currently in
             const gridY = @floor(pBottomEdge / 32.0) * 32.0;
             if (bottomLeft == 1 or bottomRight == 1) {
@@ -214,9 +192,9 @@ pub const Game = struct {
                         .RIGHT,
                     );
                 }
-            } else if (middleLeft == 5 or middleLeft == 5) {
+            } else if (middleLeft == 5 or middleLeft == 3) {
                 // FALLING AND MOVE LEFT AND COLLIDE WITH ANY OBJECT
-                const rightEdgeOfGrid = (pLeftEdge / 32.0) * 32.0;
+                const rightEdgeOfGrid = @floor(pLeftEdge / 32.0) * 32.0;
                 const bottomOfGridElement = @floor(pTopEdge / 32.0) * 32.0;
                 if (pLeftEdge >= rightEdgeOfGrid and pTopEdge >= bottomOfGridElement) {
                     self.handleCollisionss(
@@ -231,10 +209,11 @@ pub const Game = struct {
             } else {
                 // AIR: Nothing below feet
                 self.player.setIsOnGround(false);
+                self.checkCollisionEnemies(dt, 0.0, 0.0, .Y);
             }
         }
         // --- VERTICAL COLLISIONS Jumping ---
-        else if (vel_y < 0.0) {
+        else if (velY < 0.0) {
             if (middleRight == 5 or middleRight == 3) {
                 // JUMPING AND MOVE RIGHT AND COLLIDE WITH AN OBJECT
                 const leftEdgeOfGrid = @floor(pRightEdge / 32.0) * 32.0;
@@ -263,10 +242,10 @@ pub const Game = struct {
                         .LEFT,
                     );
                 }
-            } else if (topLeft == 3 or topRight == 3 or topLeft == 5 or topRight == 5) {
+            } else if (topLeftCeil == 3 or topRight == 3 or topLeftCeil == 5 or topRight == 5) {
                 // HEAD BUMP: Check if top hits a solid tile (ID 3 or 5)
-                const id = if (topLeft != 0) topLeft else topRight;
-                const ceilLine = @ceil(p_y / 32.0) * 32.0;
+                const id = if (topLeftCeil != 0) topLeftCeil else topRight;
+                const ceilLine = @ceil(pY / 32.0) * 32.0;
                 self.handleCollisionss(
                     dt,
                     .HEAD_BUMP,
@@ -299,6 +278,49 @@ pub const Game = struct {
         //         self.player.setVelocity(.X, 0);
         //     }
         // }
+    }
+    fn checkCollisionEnemies(self: *Self, dt: f32, pLeftEdge: f32, pRightEdge: f32, position: POSITION) void {
+        if (position == .Y) {
+            for (self.world.enemies.items) |enemy| {
+                if (enemy.isDynamic) {} else {
+                    if (enemy.rect.intersects(self.player.rect)) {
+                        self.handleCollisionss(
+                            dt,
+                            .ENEMY_BODY,
+                            enemy.rect.getTopEdge(),
+                            &enemy.rect.objectProperties,
+                            .Y,
+                            null,
+                        );
+                        break;
+                    }
+                }
+            }
+        } else {
+            for (self.world.enemies.items) |enemy| {
+                if (pLeftEdge <= enemy.rect.getLeftEdge() and self.ccollidedWithLeftEdge(&enemy.rect)) {
+                    self.handleCollisionss(
+                        dt,
+                        .ENEMY_BODY,
+                        enemy.rect.getLeftEdge(),
+                        &enemy.rect.objectProperties,
+                        .X,
+                        .RIGHT,
+                    );
+                    break;
+                } else if (pRightEdge >= enemy.rect.getLeftEdge() and self.collidedWithRightEdge(&enemy.rect)) {
+                    self.handleCollisionss(
+                        dt,
+                        .ENEMY_BODY,
+                        enemy.rect.getRightEdge(),
+                        &enemy.rect.objectProperties,
+                        .X,
+                        .LEFT,
+                    );
+                    break;
+                }
+            }
+        }
     }
     fn handleCollisionss(
         self: *Self,
@@ -348,21 +370,45 @@ pub const Game = struct {
                 }
             },
             .PLATFORM => {},
+            .ENEMY_BODY => {
+                if (direction) |dir| {
+                    if (dir == .RIGHT) {
+                        self.player.getRect().setPosition(position, objectPosition - self.player.getRect().getWidth());
+                    } else if (dir == .LEFT) {
+                        self.player.getRect().setPosition(position, objectPosition + self.player.getRect().getWidth());
+                    }
+                } else {
+                    self.player.getRect().setPosition(
+                        position,
+                        objectPosition - self.player.getRect().getHeight(),
+                    );
+                }
+            },
+            else => {},
         }
         if (properties.damage != null) {
-            self.handleDamage(dt, position, properties);
+            self.handleDamage(dt, position, properties, direction);
         }
     }
-    fn handleDamage(self: *Self, dt: f32, position: POSITION, properties: *const ObjectProperties) void {
-        if (self.currentTime == 0.0) {
-            self.currentTime = rayLib.getTime();
-            self.player.applyDamage(dt, position, properties);
-            self.widgets.healthBarRect.setWidth(self.player.getHealth());
-        }
-        const elapsedTime = rayLib.getTime() - self.currentTime;
+    fn handleDamage(self: *Self, dt: f32, position: POSITION, properties: *const ObjectProperties, direction: ?DIRECTION) void {
         if (properties.damage) |damageComponent| {
-            if (damageComponent.damageOverTime and elapsedTime > 1.0) {
-                self.player.applyDamage(dt, position, properties);
+            const damage = damageComponent.damageAmount;
+            if (damageComponent.damageOverTime) {
+                if (self.currentTime == 0.0) {
+                    self.currentTime = rayLib.getTime();
+                    self.player.applyDamage(damage);
+                    self.player.applyObjectEffects(dt, position, properties, direction);
+                    self.widgets.healthBarRect.setWidth(self.player.getHealth());
+                }
+                const elapsedTime = rayLib.getTime() - self.currentTime;
+                if (damageComponent.damageOverTime and elapsedTime > 1.0) {
+                    self.player.applyDamage(damage);
+                    self.player.applyObjectEffects(dt, position, properties, direction);
+                    self.widgets.healthBarRect.setWidth(self.player.getHealth());
+                }
+            } else {
+                self.player.applyDamage(damage);
+                self.player.applyObjectEffects(dt, position, properties, direction);
                 self.widgets.healthBarRect.setWidth(self.player.getHealth());
             }
         }
@@ -387,12 +433,15 @@ pub const Game = struct {
         rayLib.beginMode2D(camera);
         rayLib.clearBackground(rayLib.Color.sky_blue);
         self.world.draw();
+        for (self.world.enemies.items) |enemy| {
+            enemy.draw();
+        }
         self.player.draw();
         rayLib.endMode2D();
         self.widgets.draw();
         rayLib.endDrawing();
     }
-    // fn checkForIntersection(self: *Self, dt: f32, otherRect: Platform) void {
+    // fn checkForIntersection(self: *Self, dt: f32, otherRect: *Recttangle) void {
     //     const intersector = otherRect.getRect();
     //     if (self.player.getRect().intersects(intersector)) {
     //         // CASE: Falling onto a platform/Ground (Landing)
@@ -481,32 +530,32 @@ pub const Game = struct {
     //     }
     // }
     ///Check if the player is horizontally overlapping the platform
-    fn isWithinHorizontalBounds(self: Self, platform: Platform) bool {
-        return self.player.rect.getRightEdge() > platform.rect.getLeftEdge() and
-            self.player.rect.getLeftEdge() < platform.rect.getRightEdge();
+    fn isWithinHorizontalBounds(self: Self, rect: *Rectangle) bool {
+        return self.player.rect.getRightEdge() > rect.getLeftEdge() and
+            self.player.rect.getLeftEdge() < rect.getRightEdge();
     }
-    fn isOffTheEdge(self: Self, platform: Platform) bool {
-        return self.player.rect.getRightEdge() < platform.rect.getPosition().x or self.player.rect.getPosition().x > platform.rect.getRightEdge();
+    fn isOffTheEdge(self: Self, rect: *Rectangle) bool {
+        return self.player.rect.getRightEdge() < rect.getPosition().x or self.player.rect.getPosition().x > rect.getRightEdge();
     }
-    fn isOnSurface(self: Self, platform: Platform) bool {
-        // platform.rect.getPosition().y - self.player.rect.height == self.player.rect.getPosition().y
+    fn isOnSurface(self: Self, rect: *Rectangle) bool {
+        // Rectangle.rect.getPosition().y - self.player.rect.height == self.player.rect.getPosition().y
         // 1. Check Horizontal (Aligned)
-        if (!self.isWithinHorizontalBounds(platform)) return false;
+        if (!self.isWithinHorizontalBounds(rect)) return false;
 
         // 2. Check Vertical (Touching Surface)
         const pBottom = self.player.rect.getBottomEdge();
-        const platTop = platform.rect.getTopEdge();
+        const platTop = rect.getTopEdge();
 
         // Check if player's feet are within 1 pixel of the platform top
         const touchingSurface = @abs(pBottom - platTop) < 1.0;
         return touchingSurface;
     }
-    fn isOnTopOfPlatform(self: Self, platform: Platform) bool {
+    fn isOnTopOfPlatform(self: Self, rect: *Rectangle) bool {
         // 1. Horizontal check (already works!)
-        if (!self.isWithinHorizontalBounds(platform)) return false;
+        if (!self.isWithinHorizontalBounds(rect)) return false;
 
         const playerBottom = self.player.rect.getBottomEdge();
-        const platformTop = platform.rect.getTopEdge();
+        const platformTop = rect.getTopEdge();
 
         // 2. Are the feet between the top of the platform and a little bit inside it?
         // We check if the player is within a "skin" or "buffer" area (e.g., 4 pixels).
@@ -514,17 +563,21 @@ pub const Game = struct {
         const isAtCorrectHeight = playerBottom >= platformTop and playerBottom <= platformTop + 4.0;
         return isFallingOrStanding and isAtCorrectHeight;
     }
-    fn colliedWithgetLeftEdge(self: Self, platform: Platform) bool {
-        return self.player.rect.getRightEdge() >= platform.rect.getLeftEdge();
+    ///self.player.rect.getRightEdge() >= rect.getLeftEdge();
+    fn ccollidedWithLeftEdge(self: Self, rect: *Rectangle) bool {
+        return self.player.rect.getRightEdge() >= rect.getLeftEdge();
     }
-    fn collidedWithgetRightEdge(self: Self, platform: Platform) bool {
-        return self.player.rect.getLeftEdge() <= platform.rect.getRightEdge();
+    ///self.player.rect.getLeftEdge() <= rect.getRightEdge();
+    fn collidedWithRightEdge(self: Self, rect: *Rectangle) bool {
+        return self.player.rect.getLeftEdge() <= rect.getRightEdge();
     }
-    fn collidedWithBottom(self: Self, platform: Platform) bool {
-        return self.player.rect.getTopEdge() >= platform.rect.getBottomEdge();
+    ///
+    fn collidedWithBottom(self: Self, rect: *Rectangle) bool {
+        return self.player.rect.getTopEdge() >= rect.getBottomEdge();
     }
-    fn collidedWithTop(self: Self, platform: Platform) bool {
-        return self.player.rect.getBottomEdge() >= platform.rect.getTopEdge();
+    ///self.player.rect.getBottomEdge() >= rect.getTopEdge();
+    fn collidedWithTop(self: Self, rect: *Rectangle) bool {
+        return self.player.rect.getBottomEdge() >= rect.getTopEdge();
     }
     fn resetGameState(self: *Self) void {
         self.isGameOver = false;

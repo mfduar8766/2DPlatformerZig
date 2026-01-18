@@ -21,7 +21,7 @@ pub const LogLevels = enum(u6) {
     }
 };
 
-pub const PlatForms = enum(u4) {
+pub const OsPlatForms = enum(u4) {
     LINUX,
     MAC_ARM_64,
     MAC_X64,
@@ -77,19 +77,15 @@ pub const PLATFORM_TYPES = enum(u8) {
 pub const ENEMY_TYPES = enum(u8) {
     LOW = 0,
     MED = 1,
-    HIGH = 3,
-    BOSS = 4,
+    HIGH = 2,
+    BOSS = 3,
 };
 
 pub const UI_TYPES = enum(u2) {
-    HEALTH_BAR = 0,
-    STAMINA_BAR = 1,
-};
-
-pub const LEVEL_TYPES = enum(u8) {
-    STANDARD = 0,
-    MINI_BOSS = 1,
-    BOSS = 2,
+    MAIN_MENU = 0,
+    HEALTH_BAR = 1,
+    STAMINA_BAR = 2,
+    INVENTORY = 3,
 };
 
 pub const GAME_OBJECT_TYPES = union(enum) {
@@ -97,21 +93,13 @@ pub const GAME_OBJECT_TYPES = union(enum) {
     PLATFORM: PLATFORM_TYPES, // Platform can hold values from PLATFORM_TYPES
     ENEMY: ENEMY_TYPES, // Enemy can hold values from ENEMY_TYPE
     UI: UI_TYPES,
-    CAMERA: u2,
-    LEVEL: LEVEL_TYPES,
-    WORLD: u8,
+    WORLD: u2,
 };
 
 pub const PLAYER_STATE = enum(u8) {
-    GROUNDED = 0,
-    JUMPING = 1,
-    FALLING = 2,
-    FRENZY = 3,
-    DEAD = 4,
-    ALIVE = 5,
-    INTERSECTED = 6,
-    TAKING_DAMAGE = 7,
-    ON_TOP = 8,
+    FRENZY = 0,
+    DEAD = 1,
+    ALIVE = 2,
 };
 
 pub const VELOCITY = enum(u2) {
@@ -130,4 +118,6 @@ pub const COLLISION_TYPES = enum(u8) {
     WALL = 3,
     PLATFORM = 4,
     HORRIZONTAL = 5,
+    ENEMY_BODY = 6,
+    PROJECTILE = 7,
 };

@@ -3,48 +3,15 @@ const rayLib = @import("raylib");
 const GAME_OBJECT_TYPES = @import("../types.zig").GAME_OBJECT_TYPES;
 const POSITION = @import("../types.zig").POSITION;
 const PLATFORM = @import("../types.zig").PLATFORM_TYPES;
-
-pub const DamageHandler = struct {
-    const Self = @This();
-    dealDamage: bool = false,
-    damageAmount: f32 = 0,
-    damageOverTime: bool = false,
-
-    pub fn init(dealDamage: bool, damageAmount: f32, damageOverTime: bool) Self {
-        return .{
-            .dealDamage = dealDamage,
-            .damageAmount = damageAmount,
-            .damageOverTime = damageOverTime,
-        };
-    }
-};
-
-pub const ObjectEffects = struct {
-    const Self = @This();
-    bounce: bool = false,
-    bounceAmount: f32 = 0.0,
-    freeze: bool = false,
-    instaKill: bool = false,
-    slippery: bool = false,
-
-    pub fn init(bounce: bool, bounceAmount: f32, freeze: bool, instaKill: bool, slippery: bool) Self {
-        return .{
-            .bounce = bounce,
-            .bounceAmount = bounceAmount,
-            .freeze = freeze,
-            .instaKill = instaKill,
-            .slippery = slippery,
-        };
-    }
-};
+const ObjectProperties = @import("./objectProperties.zig").ObjectProperties;
+const DamageComponent = @import("./objectProperties.zig").DamageComponent;
 
 pub const Rectangle = struct {
     const Self = @This();
     color: rayLib.Color,
     objectType: GAME_OBJECT_TYPES = GAME_OBJECT_TYPES{ .PLAYER = 0 },
     rect: rayLib.Rectangle,
-    damage: DamageHandler = undefined,
-    effects: ObjectEffects = undefined,
+    objectProperties: ObjectProperties = undefined,
 
     pub fn init(
         objectType: GAME_OBJECT_TYPES,
@@ -166,31 +133,41 @@ pub const Rectangle = struct {
             .PLATFORM => |plat_type| {
                 switch (plat_type) {
                     .GROUND => {
-                        self.damage = DamageHandler.init(true, 10.0, false);
+                        // self.damage = DamageHandler.init(true, 10.0, false);
                     },
-                    .ICE => self.damage = DamageHandler.init(true, 10.0, true),
+                    .ICE => {
+                        //self.damage = DamageHandler.init(true, 10.0, true)
+                    },
                     .VERTICAL => {},
                     .SLIPPERY => {},
                     .WATER => {
-                        self.damage = DamageHandler.init(true, 10.0, true);
-                        self.effects = ObjectEffects.init(true, 10.0, false, false, false);
+                        // self.damage = DamageHandler.init(true, 10.0, true);
+                        // self.effects = ObjectEffects.init(true, 10.0, false, false, false);
                     },
                     .GRASS => {},
-                    .WALL => self.effects = ObjectEffects.init(true, 10.0, false, false, false),
+                    .WALL => {
+                        //self.effects = ObjectEffects.init(true, 10.0, false, false, false)
+                    },
                 }
             },
             .ENEMY => |enemy_type| {
                 switch (enemy_type) {
-                    .LOW => {},
+                    .LOW => {
+                        self.objectProperties = ObjectProperties.init(
+                            .ENEMY,
+                            true,
+                            50.0,
+                            false,
+                            false,
+                            false,
+                            DamageComponent.init(
+                                10.0,
+                                false,
+                            ),
+                        );
+                    },
                     .MED => {},
                     .HIGH => {},
-                    .BOSS => {},
-                }
-            },
-            .LEVEL => |level_idx| {
-                switch (level_idx) {
-                    .STANDARD => {},
-                    .MINI_BOSS => {},
                     .BOSS => {},
                 }
             },

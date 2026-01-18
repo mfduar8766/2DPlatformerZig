@@ -1,11 +1,12 @@
 const std = @import("std");
 const rayLib = @import("raylib");
-const Platform = @import("./platforms.zig").Platform;
 const PLATFORM_TYPES = @import("../types.zig").PLATFORM_TYPES;
 const Enemy = @import("./enemies.zig").Enemy;
 const Utils = @import("../utils/utils.zig");
 const Rectangle = @import("../common/shapes.zig").Rectangle;
 const LEVEL_TYPEs = @import("../types.zig").LEVEL_TYPES;
+const ObjectProperties = @import("../common//objectProperties.zig").ObjectProperties;
+const DamageComponent = @import("../common/objectProperties.zig").DamageComponent;
 
 const CHAR_EMPTY_SPACE: u8 = '.';
 const CHAR_GROUND: u8 = '#';
@@ -14,6 +15,7 @@ const CHAR_WALL: u8 = '|';
 const CHAR_SPILES: u8 = '^';
 const CHAR_HORRIZONTAL_PLATFORM: u8 = '_';
 const CHAR_CHECK_POINT: u8 = 'C';
+const CHAR_ENEMY: u8 = 'E';
 const WATER_HEIGHT = 5.0;
 const SPIKE_HEIGHT = 5.0;
 pub const LevelBluePrintMappingObjectTypes = enum(u8) {
@@ -24,6 +26,7 @@ pub const LevelBluePrintMappingObjectTypes = enum(u8) {
     SPIKES,
     HORRIZONTAL_PLATFORMS,
     CHECK_POINT,
+    ENEMY,
 
     pub fn charToId(char: u8) u8 {
         return switch (char) {
@@ -34,6 +37,7 @@ pub const LevelBluePrintMappingObjectTypes = enum(u8) {
             CHAR_SPILES => 4,
             CHAR_HORRIZONTAL_PLATFORM => 5,
             CHAR_CHECK_POINT => 6,
+            CHAR_ENEMY => 7,
             else => 0,
         };
     }
@@ -46,58 +50,16 @@ pub const LevelBluePrintMappingObjectTypes = enum(u8) {
             4 => CHAR_SPILES,
             5 => CHAR_HORRIZONTAL_PLATFORM,
             6 => CHAR_CHECK_POINT,
+            7 => CHAR_ENEMY,
             else => CHAR_EMPTY_SPACE,
         };
     }
 };
 
-pub const ObjectProperties = struct {
-    const Self = @This();
-    objectType: LevelBluePrintMappingObjectTypes,
-    bounce: bool = false,
-    bounceAmount: f32 = 0.0,
-    freeze: bool = false,
-    instaKill: bool = false,
-    slippery: bool = false,
-    damage: ?DamageComponent = null,
-
-    pub fn init(
-        objectType: LevelBluePrintMappingObjectTypes,
-        bounce: bool,
-        bounceAmount: f32,
-        freeze: bool,
-        instaKill: bool,
-        slippery: bool,
-        damage: ?DamageComponent,
-    ) Self {
-        return .{
-            .objectType = objectType,
-            .bounce = bounce,
-            .bounceAmount = bounceAmount,
-            .freeze = freeze,
-            .instaKill = instaKill,
-            .slippery = slippery,
-            .damage = damage,
-        };
-    }
-};
-
-const DamageComponent = struct {
-    const Self = @This();
-    damageAmount: f32 = 0.0,
-    damageOverTime: bool = false,
-
-    pub fn init(damageAmount: f32, damageOverTime: bool) Self {
-        return .{
-            .damageAmount = damageAmount,
-            .damageOverTime = damageOverTime,
-        };
-    }
-};
-
+//TODO: FIGURE OUT HOW TO USE THIS PROPERLY
 const Entity = union(enum) {
     enemies: *Enemy,
-    platforms: *Platform,
+    // platforms: *Rectangle,
 };
 
 pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
@@ -129,8 +91,8 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
                 ".....|..|.......................................",
                 ".....|..|.......................................",
                 ".....|..|.......................................",
-                ".....|..|.......................................",
-                ".....|..|......................................",
+                ".....|..|.............___.......................",
+                ".....|..|....E.................................",
                 "###############~~~~~###########################", // 18
             },
             .{
@@ -167,7 +129,7 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
         // The "Baked" 1D array for physics/rendering
         activeMap: [ROWS * WORLD_PIXEL_WIDTH]u8 = undefined,
         enemies: std.ArrayList(*Enemy),
-        dynamicPlatforms: std.ArrayList(*Platform),
+        dynamicPlatforms: std.ArrayList(Rectangle),
         levelObjectProperties: std.AutoHashMap(u8, ObjectProperties) = undefined,
 
         pub fn init(allocator: std.mem.Allocator) !*Self {
@@ -175,7 +137,7 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
             self.* = .{
                 .allocator = allocator,
                 .enemies = std.ArrayList(*Enemy).empty,
-                .dynamicPlatforms = std.ArrayList(*Platform).empty,
+                .dynamicPlatforms = std.ArrayList(Rectangle).empty,
                 .rect = Rectangle.init(
                     .{ .WORLD = 0 },
                     WORLD_PIXEL_WIDTH,
@@ -191,6 +153,10 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
         }
         pub fn deinit(self: *Self) void {
             self.dynamicPlatforms.deinit(self.allocator);
+            // self.enemies.deinit(self.allocator);
+            for (self.enemies.items) |enemy| {
+                enemy.deinit();
+            }
             self.enemies.deinit(self.allocator);
             self.levelObjectProperties.deinit();
             self.allocator.destroy(self);
@@ -217,14 +183,20 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
                     const gridCharacterLocation = currentLevelBluePrint[row][col];
                     const index = row * COLUMNS_PER_LEVEL + col;
                     self.activeMap[index] = LevelBluePrintMappingObjectTypes.charToId(gridCharacterLocation);
+                    try self.handleDynamicObjectPlaceMent(
+                        gridCharacterLocation,
+                        col,
+                        row,
+                        levelIndex,
+                    );
                     //TODO: FIGURE OUT HOW TO RESET PLAYER RESPAWN
                     // if (char == 'P' and self.currentLevelIndex == 0) {
-                    //     // Global spawn logic
-                    //     const global_x_offset = @as(f32, @floatFromInt(levelIndex * LEVEL_WIDTH));
-                    //     const spawn_x = (@as(f32, @floatFromInt(x)) * @as(f32, @floatFromInt(TILE_SIZE))) + global_x_offset;
-                    //     const spawn_y = @as(f32, @floatFromInt(y)) * @as(f32, @floatFromInt(TILE_SIZE));
-                    //     self.player.getRect().setPosition(.X, spawn_x);
-                    //     self.player.getRect().setPosition(.Y, spawn_y);
+                    // Global spawn logic
+                    // const global_x_offset = @as(f32, @floatFromInt(levelIndex * LEVEL_WIDTH));
+                    // const spawn_x = (@as(f32, @floatFromInt(x)) * @as(f32, @floatFromInt(TILE_SIZE))) + global_x_offset;
+                    // const spawn_y = @as(f32, @floatFromInt(y)) * @as(f32, @floatFromInt(TILE_SIZE));
+                    // self.player.getRect().setPosition(.X, spawn_x);
+                    // self.player.getRect().setPosition(.Y, spawn_y);
                     // }
                 }
             }
@@ -241,6 +213,19 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
                 drawLevelBluePrintByIndex(self.currentLevelIndex - 1);
             }
         }
+        ///0 => CHAR_EMPTY_SPACE
+        ///
+        /// 1 => CHAR_GROUND
+        ///
+        /// 2 => CHAR_WATER
+        ///
+        /// 3 => CHAR_WALL
+        ///
+        /// 4 => CHAR_SPILES
+        ///
+        /// 5 => CHAR_HORRIZONTAL_PLATFORM
+        ///
+        /// 6 => CHAR_CHECK_POINT
         pub fn getTilesAt(self: *Self, playerX: f32, playerY: f32) u8 {
             // 1. Determine which level index this X coordinate belongs to
             // Example: 1600 / 1504 = 1.06 -> Index 1
@@ -332,7 +317,7 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
                     4 => try self.levelObjectProperties.put(key, ObjectProperties.init(
                         LevelBluePrintMappingObjectTypes.SPIKES,
                         true,
-                        10.0,
+                        100.0,
                         false,
                         false,
                         false,
@@ -404,6 +389,22 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
                     rayLib.Color.gold,
                 ),
                 else => {},
+            }
+        }
+        fn handleDynamicObjectPlaceMent(self: *Self, gridCharacterLocation: u8, col: usize, row: usize, levelIndex: usize) !void {
+            if (gridCharacterLocation == CHAR_ENEMY) {
+                const global_x_offset = @as(f32, @floatFromInt(levelIndex * LEVEL_WIDTH));
+                const spawn_x = (@as(f32, @floatFromInt(col)) * TILE_SIZE_F32) + global_x_offset;
+                const spawn_y = @as(f32, @floatFromInt(row)) * TILE_SIZE_F32;
+                try self.enemies.append(self.allocator, try Enemy.init(
+                    self.allocator,
+                    .LOW,
+                    rayLib.Vector2.init(
+                        spawn_x,
+                        spawn_y,
+                    ),
+                    false,
+                ));
             }
         }
     };
