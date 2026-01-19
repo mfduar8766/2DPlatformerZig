@@ -9,7 +9,7 @@ const VELOCITY = @import("../types.zig").VELOCITY;
 const Utils = @import("../utils/utils.zig");
 const Config = @import("./game.zig").Config;
 const POSITION = @import("../types.zig").POSITION;
-const ObjectProperties = @import("world.zig").ObjectProperties;
+const ObjectProperties = @import("../common/objectProperties.zig").ObjectProperties;
 
 pub const Player = struct {
     const Self = @This();
@@ -26,7 +26,6 @@ pub const Player = struct {
     velocityY: f32 = 0.0,
     playerState: PLAYER_STATE = .ALIVE, // BEFORE THIS WAS A BOOL onGround SHOULD I KEEP A BOOL OR A ENUM? ENUM SEEMS TO BE MORE WORK
     // jumpStartTime: f64 = 0.0,
-    damageBounce: f32 = -100.0,
     spped: f32 = 100.0,
     canSwim: bool = false,
     onGround: bool = true,
@@ -44,9 +43,9 @@ pub const Player = struct {
                 32.0,
                 rayLib.Vector2.init(
                     0.0,
-                    544,
+                    Utils.floatFromInt(f32, rayLib.getScreenHeight()) - 32.0,
                 ),
-                .red,
+                .yellow,
             ),
             .config = config,
         };
@@ -70,13 +69,14 @@ pub const Player = struct {
             self.rect.addPosition(.X, self.velocityX * self.speedMultiplier * dt);
             self.checkBounds(DIRECTION.RIGHT, worldBounds);
         } else if (rayLib.isKeyDown(.a)) {
-            self.velocityX = self.spped;
-            self.rect.subtractPosition(.X, self.velocityX * self.speedMultiplier * dt);
+            self.velocityX = -self.spped;
+            self.rect.addPosition(.X, self.velocityX * self.speedMultiplier * dt);
             self.checkBounds(DIRECTION.LEFT, worldBounds);
         }
         if (rayLib.isKeyPressed(rayLib.KeyboardKey.w) and self.onGround) {
             self.velocityY = self.jumpHeight; //* self.jumpMultiplier;
             self.onGround = false;
+            self.isFalling = true;
             // self.jumpStartTime = rayLib.getTime();
         }
         if (!self.onGround) {
@@ -116,7 +116,11 @@ pub const Player = struct {
     }
     pub fn setIsOnGround(self: *Self, value: bool) void {
         self.onGround = value;
-        self.isFalling = false;
+        if (!value) {
+            self.isFalling = true;
+        } else {
+            self.isFalling = false;
+        }
     }
     pub fn getIsOnGround(self: Self) bool {
         return self.onGround;
@@ -133,11 +137,29 @@ pub const Player = struct {
         }
         return self.velocityY;
     }
-    pub fn applyDamage(self: *Self, dt: f32, position: POSITION, properties: *const ObjectProperties) void {
-        const damage = if (properties.damage != null) properties.damage.?.damageAmount else 0.0;
+    pub fn applyDamage(self: *Self, damage: f32) void {
         self.setDamage(damage);
+    }
+    pub fn applyObjectEffects(
+        self: *Self,
+        dt: f32,
+        position: POSITION,
+        properties: *const ObjectProperties,
+        direction: ?DIRECTION,
+    ) void {
         if (properties.bounce) {
-            if (position == .X) {} else {
+            if (position == .X) {
+                const left = if (direction) |dir| dir == .LEFT else false;
+                if (left) {} else {
+                    self.velocityX = if (Utils.isNegativeNumber(properties.bounceAmount)) properties.bounceAmount else Utils.convertSigns(
+                        .POSITIVE,
+                        properties.bounceAmount,
+                    );
+                    self.velocityX += self.spped * dt;
+                    self.rect.addPosition(.X, self.velocityX);
+                    self.velocityX = 0.0;
+                }
+            } else {
                 self.velocityY = if (Utils.isNegativeNumber(properties.bounceAmount)) properties.bounceAmount else Utils.convertSigns(
                     .POSITIVE,
                     properties.bounceAmount,

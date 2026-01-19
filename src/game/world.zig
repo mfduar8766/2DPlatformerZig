@@ -1,19 +1,23 @@
 const std = @import("std");
 const rayLib = @import("raylib");
-const Platform = @import("./platforms.zig").Platform;
 const PLATFORM_TYPES = @import("../types.zig").PLATFORM_TYPES;
 const Enemy = @import("./enemies.zig").Enemy;
 const Utils = @import("../utils/utils.zig");
 const Rectangle = @import("../common/shapes.zig").Rectangle;
 const LEVEL_TYPEs = @import("../types.zig").LEVEL_TYPES;
+const ObjectProperties = @import("../common//objectProperties.zig").ObjectProperties;
+const DamageComponent = @import("../common/objectProperties.zig").DamageComponent;
+const TILE_SIZE = @import("../types.zig").TILE_SIZE;
+const TILE_SIZE_F32 = @import("../types.zig").TILE_SIZE_F32;
 
-const C_EMPTY_SPACE: u8 = '.';
-const C_GROUND: u8 = '#';
-const C_WATER: u8 = '~';
-const C_WALL: u8 = '|';
-const C_SPILES: u8 = '^';
-const C_HORRIZONTAL_PLATFORM: u8 = '_';
-const C_CHECK_POINT: u8 = 'C';
+const CHAR_EMPTY_SPACE: u8 = '.';
+const CHAR_GROUND: u8 = '#';
+const CHAR_WATER: u8 = '~';
+const CHAR_WALL: u8 = '|';
+const CHAR_SPILES: u8 = '^';
+const CHAR_HORRIZONTAL_PLATFORM: u8 = '_';
+const CHAR_CHECK_POINT: u8 = 'C';
+const CHAR_ENEMY: u8 = 'E';
 const WATER_HEIGHT = 5.0;
 const SPIKE_HEIGHT = 5.0;
 pub const LevelBluePrintMappingObjectTypes = enum(u8) {
@@ -24,82 +28,49 @@ pub const LevelBluePrintMappingObjectTypes = enum(u8) {
     SPIKES,
     HORRIZONTAL_PLATFORMS,
     CHECK_POINT,
+    ENEMY,
 
     pub fn charToId(char: u8) u8 {
         return switch (char) {
-            C_EMPTY_SPACE => 0,
-            C_GROUND => 1,
-            C_WATER => 2,
-            C_WALL => 3,
-            C_SPILES => 4,
-            C_HORRIZONTAL_PLATFORM => 5,
-            C_CHECK_POINT => 6,
+            CHAR_EMPTY_SPACE => 0,
+            CHAR_GROUND => 1,
+            CHAR_WATER => 2,
+            CHAR_WALL => 3,
+            CHAR_SPILES => 4,
+            CHAR_HORRIZONTAL_PLATFORM => 5,
+            CHAR_CHECK_POINT => 6,
+            CHAR_ENEMY => 7,
             else => 0,
         };
     }
     pub fn idToChar(id: usize) u8 {
         return switch (id) {
-            0 => C_EMPTY_SPACE,
-            1 => C_GROUND,
-            2 => C_WATER,
-            3 => C_WALL,
-            4 => C_SPILES,
-            5 => C_HORRIZONTAL_PLATFORM,
-            6 => C_CHECK_POINT,
-            else => C_EMPTY_SPACE,
-        };
-    }
-};
-
-pub const ObjectProperties = struct {
-    const Self = @This();
-    objectType: LevelBluePrintMappingObjectTypes,
-    bounce: bool = false,
-    bounceAmount: f32 = 0.0,
-    freeze: bool = false,
-    instaKill: bool = false,
-    slippery: bool = false,
-    damage: ?DamageComponent = null,
-
-    pub fn init(
-        objectType: LevelBluePrintMappingObjectTypes,
-        bounce: bool,
-        bounceAmount: f32,
-        freeze: bool,
-        instaKill: bool,
-        slippery: bool,
-        damage: ?DamageComponent,
-    ) Self {
-        return .{
-            .objectType = objectType,
-            .bounce = bounce,
-            .bounceAmount = bounceAmount,
-            .freeze = freeze,
-            .instaKill = instaKill,
-            .slippery = slippery,
-            .damage = damage,
-        };
-    }
-};
-
-const DamageComponent = struct {
-    const Self = @This();
-    damageAmount: f32 = 0.0,
-    damageOverTime: bool = false,
-
-    pub fn init(damageAmount: f32, damageOverTime: bool) Self {
-        return .{
-            .damageAmount = damageAmount,
-            .damageOverTime = damageOverTime,
+            0 => CHAR_EMPTY_SPACE,
+            1 => CHAR_GROUND,
+            2 => CHAR_WATER,
+            3 => CHAR_WALL,
+            4 => CHAR_SPILES,
+            5 => CHAR_HORRIZONTAL_PLATFORM,
+            6 => CHAR_CHECK_POINT,
+            7 => CHAR_ENEMY,
+            else => CHAR_EMPTY_SPACE,
         };
     }
 };
 
 pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
+    // const enemy_ai = Node{
+    //     .sequence = .{
+    //         .children = &[_]Node{
+    //             .{ .check_health = .{ .hp = 100.0 } },
+    //             .{ .move_to_enemy = .{} },
+    //         },
+    //     },
+    // };
+    // _ = enemy_ai.tick();
+
     return struct {
         const Self = @This();
-        const TILE_SIZE: usize = 32;
-        const TILE_SIZE_F32 = 32.0;
         ///The Blueprints (Shared across all instances)
         ///
         ///Each . represents a row so each char(.,~,|,_,^,ETC) represends a cell in that row
@@ -118,14 +89,14 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
                 "...............................................",
                 "...............................................",
                 "...............................................",
-                ".....|.........................................", // 10
-                ".....|.........................................",
-                ".....|...................|.....................", // 12
-                ".....|...................|.....................",
-                ".....|...................|.....................",
-                ".....|....___............|.....................",
-                "...............................................",
-                ".....|...................|.....................",
+                "...............................................", // 10
+                ".....|..|.......................................",
+                ".....|..|.......................................", // 12
+                ".....|..|.......................................",
+                ".....|..|.......................................",
+                ".....|..|.......................................",
+                ".....|..|.............___.......................",
+                ".....|..|....E......E..........................",
                 "###############~~~~~###########################", // 18
             },
             .{
@@ -162,15 +133,16 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
         // The "Baked" 1D array for physics/rendering
         activeMap: [ROWS * WORLD_PIXEL_WIDTH]u8 = undefined,
         enemies: std.ArrayList(*Enemy),
-        dynamicPlatforms: std.ArrayList(*Platform),
+        dynamicPlatforms: std.ArrayList(Rectangle),
         levelObjectProperties: std.AutoHashMap(u8, ObjectProperties) = undefined,
 
         pub fn init(allocator: std.mem.Allocator) !*Self {
+            // try foo(allocator);
             const self = try allocator.create(Self);
             self.* = .{
                 .allocator = allocator,
                 .enemies = std.ArrayList(*Enemy).empty,
-                .dynamicPlatforms = std.ArrayList(*Platform).empty,
+                .dynamicPlatforms = std.ArrayList(Rectangle).empty,
                 .rect = Rectangle.init(
                     .{ .WORLD = 0 },
                     WORLD_PIXEL_WIDTH,
@@ -186,6 +158,10 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
         }
         pub fn deinit(self: *Self) void {
             self.dynamicPlatforms.deinit(self.allocator);
+            // self.enemies.deinit(self.allocator);
+            for (self.enemies.items) |enemy| {
+                enemy.deinit();
+            }
             self.enemies.deinit(self.allocator);
             self.levelObjectProperties.deinit();
             self.allocator.destroy(self);
@@ -212,14 +188,21 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
                     const gridCharacterLocation = currentLevelBluePrint[row][col];
                     const index = row * COLUMNS_PER_LEVEL + col;
                     self.activeMap[index] = LevelBluePrintMappingObjectTypes.charToId(gridCharacterLocation);
+                    try self.handleDynamicObjectPlaceMent(
+                        gridCharacterLocation,
+                        col,
+                        row,
+                        levelIndex,
+                        index,
+                    );
                     //TODO: FIGURE OUT HOW TO RESET PLAYER RESPAWN
                     // if (char == 'P' and self.currentLevelIndex == 0) {
-                    //     // Global spawn logic
-                    //     const global_x_offset = @as(f32, @floatFromInt(levelIndex * LEVEL_WIDTH));
-                    //     const spawn_x = (@as(f32, @floatFromInt(x)) * @as(f32, @floatFromInt(TILE_SIZE))) + global_x_offset;
-                    //     const spawn_y = @as(f32, @floatFromInt(y)) * @as(f32, @floatFromInt(TILE_SIZE));
-                    //     self.player.getRect().setPosition(.X, spawn_x);
-                    //     self.player.getRect().setPosition(.Y, spawn_y);
+                    // Global spawn logic
+                    // const global_x_offset = @as(f32, @floatFromInt(levelIndex * LEVEL_WIDTH));
+                    // const spawn_x = (@as(f32, @floatFromInt(x)) * @as(f32, @floatFromInt(TILE_SIZE))) + global_x_offset;
+                    // const spawn_y = @as(f32, @floatFromInt(y)) * @as(f32, @floatFromInt(TILE_SIZE));
+                    // self.player.getRect().setPosition(.X, spawn_x);
+                    // self.player.getRect().setPosition(.Y, spawn_y);
                     // }
                 }
             }
@@ -236,6 +219,19 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
                 drawLevelBluePrintByIndex(self.currentLevelIndex - 1);
             }
         }
+        ///0 => CHAR_EMPTY_SPACE
+        ///
+        /// 1 => CHAR_GROUND
+        ///
+        /// 2 => CHAR_WATER
+        ///
+        /// 3 => CHAR_WALL
+        ///
+        /// 4 => CHAR_SPILES
+        ///
+        /// 5 => CHAR_HORRIZONTAL_PLATFORM
+        ///
+        /// 6 => CHAR_CHECK_POINT
         pub fn getTilesAt(self: *Self, playerX: f32, playerY: f32) u8 {
             // 1. Determine which level index this X coordinate belongs to
             // Example: 1600 / 1504 = 1.06 -> Index 1
@@ -283,11 +279,11 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
         }
         fn setLevelObjectProperties(self: *Self) !void {
             const levelTileTypes = [5]u8{
-                LevelBluePrintMappingObjectTypes.charToId(C_GROUND),
-                LevelBluePrintMappingObjectTypes.charToId(C_WATER),
-                LevelBluePrintMappingObjectTypes.charToId(C_WALL),
-                LevelBluePrintMappingObjectTypes.charToId(C_SPILES),
-                LevelBluePrintMappingObjectTypes.charToId(C_HORRIZONTAL_PLATFORM),
+                LevelBluePrintMappingObjectTypes.charToId(CHAR_GROUND),
+                LevelBluePrintMappingObjectTypes.charToId(CHAR_WATER),
+                LevelBluePrintMappingObjectTypes.charToId(CHAR_WALL),
+                LevelBluePrintMappingObjectTypes.charToId(CHAR_SPILES),
+                LevelBluePrintMappingObjectTypes.charToId(CHAR_HORRIZONTAL_PLATFORM),
             };
             for (levelTileTypes) |key| {
                 switch (key) {
@@ -327,7 +323,7 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
                     4 => try self.levelObjectProperties.put(key, ObjectProperties.init(
                         LevelBluePrintMappingObjectTypes.SPIKES,
                         true,
-                        10.0,
+                        100.0,
                         false,
                         false,
                         false,
@@ -399,6 +395,31 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
                     rayLib.Color.gold,
                 ),
                 else => {},
+            }
+        }
+        fn handleDynamicObjectPlaceMent(
+            self: *Self,
+            gridCharacterLocation: u8,
+            col: usize,
+            row: usize,
+            levelIndex: usize,
+            index: usize,
+        ) !void {
+            if (gridCharacterLocation == CHAR_ENEMY) {
+                std.debug.print("INDEX: {d}\n", .{index});
+                const global_x_offset = @as(f32, @floatFromInt(levelIndex * LEVEL_WIDTH));
+                const spawn_x = (@as(f32, @floatFromInt(col)) * TILE_SIZE_F32) + global_x_offset;
+                const spawn_y = @as(f32, @floatFromInt(row)) * TILE_SIZE_F32;
+                try self.enemies.append(self.allocator, try Enemy.init(
+                    self.allocator,
+                    index,
+                    .LOW,
+                    rayLib.Vector2.init(
+                        spawn_x,
+                        spawn_y,
+                    ),
+                    false,
+                ));
             }
         }
     };
