@@ -99,23 +99,32 @@ fn MoveTowardsPlayer(comptime T: type) type {
                     //     enemy.getRect().getPosition(),
                     //     dx,
                     // });
-                    if ((enemy.enemyState == .IDEL or enemy.enemyState != .DEAD) and dx >= outOfRange) {
-                        enemy.startCoolDown();
-                    }
-                    if (playerX < enemyX) {
-                        if (dx < attackRange and dy < TILE_SIZE_F) {
-                            enemy.update(dt, playerPosition, .ATTACK, .LEFT);
-                        } else if (dx > attackRange and dy < TILE_SIZE_F and objectType.enemyState == .ATTACK) {
-                            enemy.update(dt, playerPosition, .PATROL, .LEFT);
+                    if (enemy.enemyState != .IDEL or enemy.enemyState != .DEAD) {
+                        if (dx >= outOfRange) {
+                            std.debug.print("OUT-OF-RANGE player. state: {any} playerPos: {any} enemyLocation: {any} DX: {d}, outOfRange: {d}\n", .{
+                                objectType.enemyState,
+                                playerPosition,
+                                enemy.getRect().getPosition(),
+                                dx,
+                                outOfRange,
+                            });
+                            enemy.startCoolDown();
+                        } else if (playerX < enemyX) {
+                            if (dx < attackRange and dy < TILE_SIZE_F) {
+                                enemy.update(dt, playerPosition, .ATTACK, .LEFT);
+                            } else if (dx > attackRange and dy < TILE_SIZE_F and objectType.enemyState == .ATTACK) {
+                                enemy.update(dt, playerPosition, .PATROL, .LEFT);
+                            }
+                        } else if (playerX > enemyX) {
+                            std.debug.print("GREATER\n", .{});
+                            if (dx < attackRange and dy < TILE_SIZE_F) {
+                                enemy.update(dt, playerPosition, .ATTACK, .RIGHT);
+                            } else if (dx > attackRange and dy < TILE_SIZE_F and objectType.enemyState == .ATTACK) {
+                                enemy.update(dt, playerPosition, .PATROL, .RIGHT);
+                            }
                         }
-                    } else if (playerX > enemyX) {
-                        std.debug.print("GREATER\n", .{});
-                        if (dx < attackRange and dy < TILE_SIZE_F) {
-                            enemy.update(dt, playerPosition, .ATTACK, .RIGHT);
-                        } else if (dx > attackRange and dy < TILE_SIZE_F and objectType.enemyState == .ATTACK) {
-                            enemy.update(dt, playerPosition, .PATROL, .RIGHT);
-                        }
                     }
+
                     // if (dx < attackRange and dy < TILE_SIZE_F) {
                     //     enemy.update(dt, playerPosition, .ATTACK);
                     // } else if (dx > attackRange and dy < TILE_SIZE_F and objectType.enemyState == .ATTACK) {
