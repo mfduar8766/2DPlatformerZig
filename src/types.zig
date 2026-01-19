@@ -2,6 +2,8 @@ pub const SCREEN_HEIGHT: i32 = 2500;
 pub const SCREEN_WIDTH: i32 = 1500;
 pub const SCREEN_DIVISOR: i32 = 2;
 pub const GRAVITY: f32 = 100.0;
+pub const TILE_SIZE: usize = 32;
+pub const TILE_SIZE_F32 = 32.0;
 
 pub const LogLevels = enum(u6) {
     INFO = 0,
@@ -120,4 +122,12 @@ pub const COLLISION_TYPES = enum(u8) {
     HORRIZONTAL = 5,
     ENEMY_BODY = 6,
     PROJECTILE = 7,
+};
+
+pub const ENEMEY_STATE = enum(u8) {
+    IDEL = 0,
+    PATROL = 1,
+    ALERT = 3,
+    ATTACK = 4,
+    DEAD = 5,
 };

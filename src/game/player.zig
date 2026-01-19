@@ -43,7 +43,7 @@ pub const Player = struct {
                 32.0,
                 rayLib.Vector2.init(
                     0.0,
-                    544,
+                    Utils.floatFromInt(f32, rayLib.getScreenHeight()) - 32.0,
                 ),
                 .yellow,
             ),

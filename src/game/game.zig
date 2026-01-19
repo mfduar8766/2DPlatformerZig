@@ -131,6 +131,8 @@ pub const Game = struct {
 
         if (velX > 0.0 and 0.0 == velY) {
             self.checkCollisionEnemies(dt, pLeftEdge, pRightEdge, .X);
+        } else if (velX < 0.0 and 0.0 == velY) {
+            self.checkCollisionEnemies(dt, pLeftEdge, pRightEdge, .X);
         }
         // --- VERTICAL COLLISIONS (Falling) ---
         else if (velY >= 0.0) {
@@ -298,6 +300,7 @@ pub const Game = struct {
             }
         } else {
             for (self.world.enemies.items) |enemy| {
+                enemy.update(dt, self.player.rect.getPosition());
                 if (pLeftEdge <= enemy.rect.getLeftEdge() and self.ccollidedWithLeftEdge(&enemy.rect)) {
                     self.handleCollisionss(
                         dt,

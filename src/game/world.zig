@@ -7,6 +7,8 @@ const Rectangle = @import("../common/shapes.zig").Rectangle;
 const LEVEL_TYPEs = @import("../types.zig").LEVEL_TYPES;
 const ObjectProperties = @import("../common//objectProperties.zig").ObjectProperties;
 const DamageComponent = @import("../common/objectProperties.zig").DamageComponent;
+const TILE_SIZE = @import("../types.zig").TILE_SIZE;
+const TILE_SIZE_F32 = @import("../types.zig").TILE_SIZE_F32;
 
 const CHAR_EMPTY_SPACE: u8 = '.';
 const CHAR_GROUND: u8 = '#';
@@ -56,17 +58,19 @@ pub const LevelBluePrintMappingObjectTypes = enum(u8) {
     }
 };
 
-//TODO: FIGURE OUT HOW TO USE THIS PROPERLY
-const Entity = union(enum) {
-    enemies: *Enemy,
-    // platforms: *Rectangle,
-};
-
 pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
+    // const enemy_ai = Node{
+    //     .sequence = .{
+    //         .children = &[_]Node{
+    //             .{ .check_health = .{ .hp = 100.0 } },
+    //             .{ .move_to_enemy = .{} },
+    //         },
+    //     },
+    // };
+    // _ = enemy_ai.tick();
+
     return struct {
         const Self = @This();
-        const TILE_SIZE: usize = 32;
-        const TILE_SIZE_F32 = 32.0;
         ///The Blueprints (Shared across all instances)
         ///
         ///Each . represents a row so each char(.,~,|,_,^,ETC) represends a cell in that row
@@ -92,7 +96,7 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
                 ".....|..|.......................................",
                 ".....|..|.......................................",
                 ".....|..|.............___.......................",
-                ".....|..|....E.................................",
+                ".....|..|....E......E..........................",
                 "###############~~~~~###########################", // 18
             },
             .{
@@ -133,6 +137,7 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
         levelObjectProperties: std.AutoHashMap(u8, ObjectProperties) = undefined,
 
         pub fn init(allocator: std.mem.Allocator) !*Self {
+            // try foo(allocator);
             const self = try allocator.create(Self);
             self.* = .{
                 .allocator = allocator,
@@ -188,6 +193,7 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
                         col,
                         row,
                         levelIndex,
+                        index,
                     );
                     //TODO: FIGURE OUT HOW TO RESET PLAYER RESPAWN
                     // if (char == 'P' and self.currentLevelIndex == 0) {
@@ -391,13 +397,22 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
                 else => {},
             }
         }
-        fn handleDynamicObjectPlaceMent(self: *Self, gridCharacterLocation: u8, col: usize, row: usize, levelIndex: usize) !void {
+        fn handleDynamicObjectPlaceMent(
+            self: *Self,
+            gridCharacterLocation: u8,
+            col: usize,
+            row: usize,
+            levelIndex: usize,
+            index: usize,
+        ) !void {
             if (gridCharacterLocation == CHAR_ENEMY) {
+                std.debug.print("INDEX: {d}\n", .{index});
                 const global_x_offset = @as(f32, @floatFromInt(levelIndex * LEVEL_WIDTH));
                 const spawn_x = (@as(f32, @floatFromInt(col)) * TILE_SIZE_F32) + global_x_offset;
                 const spawn_y = @as(f32, @floatFromInt(row)) * TILE_SIZE_F32;
                 try self.enemies.append(self.allocator, try Enemy.init(
                     self.allocator,
+                    index,
                     .LOW,
                     rayLib.Vector2.init(
                         spawn_x,
