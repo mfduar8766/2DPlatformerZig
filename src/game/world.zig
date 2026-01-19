@@ -96,7 +96,7 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
                 ".....|..|.......................................",
                 ".....|..|.......................................",
                 ".....|..|.............___.......................",
-                ".....|..|....E......E..........................",
+                ".....|..|..E...................................",
                 "###############~~~~~###########################", // 18
             },
             .{
@@ -232,6 +232,8 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
         /// 5 => CHAR_HORRIZONTAL_PLATFORM
         ///
         /// 6 => CHAR_CHECK_POINT
+        ///
+        /// 7 => CHAR_ENEMY
         pub fn getTilesAt(self: *Self, playerX: f32, playerY: f32) u8 {
             // 1. Determine which level index this X coordinate belongs to
             // Example: 1600 / 1504 = 1.06 -> Index 1
@@ -294,6 +296,7 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
                         false,
                         false,
                         false,
+                        true,
                         DamageComponent.init(
                             0,
                             false,
@@ -306,6 +309,7 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
                         false,
                         false,
                         false,
+                        true,
                         DamageComponent.init(
                             10.0,
                             true,
@@ -318,6 +322,7 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
                         false,
                         false,
                         false,
+                        false,
                         null,
                     )),
                     4 => try self.levelObjectProperties.put(key, ObjectProperties.init(
@@ -327,6 +332,7 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
                         false,
                         false,
                         false,
+                        true,
                         DamageComponent.init(
                             10.0,
                             true,
@@ -339,6 +345,7 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
                         false,
                         false,
                         false,
+                        true,
                         null,
                     )),
                     else => {},

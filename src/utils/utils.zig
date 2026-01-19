@@ -867,3 +867,33 @@ pub fn convertSigns(signConversion: SIGN_CONVERSION, int: anytype) @TypeOf(int) 
         return std.math.copysign(int, -1.0);
     }
 }
+
+pub fn Timer() type {
+    return struct {
+        const Self = @This();
+        startTime: f64 = 0.0,
+        elapsedTime: f64 = 0.0,
+        endTime: f64 = 1.0,
+
+        pub fn init(endTime: f64) Self {
+            return Self{
+                .endTime = endTime,
+            };
+        }
+        pub fn start(self: *Self) void {
+            if (self.startTime == 0.0) {
+                self.startTime = rayLib.getTime();
+            } else {
+                self.elapsedTime = rayLib.getTime() - self.startTime;
+            }
+        }
+        pub fn hasElapsed(self: *Self) bool {
+            return self.elapsedTime >= self.endTime;
+        }
+        pub fn reset(self: *Self) void {
+            self.startTime = 0.0;
+            self.elapsedTime = 0.0;
+            self.endTime = 1.0;
+        }
+    };
+}

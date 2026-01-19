@@ -127,6 +127,43 @@ pub const Rectangle = struct {
     pub fn getLeftEdge(self: Self) f32 {
         return self.rect.x;
     }
+    ///Check if the rect is horizontally overlapping the platform
+    pub fn isWithinHorizontalBounds(self: Self, rect: *Rectangle) bool {
+        return self.rect.getRightEdge() > rect.getLeftEdge() and
+            self.getLeftEdge() < rect.getRightEdge();
+    }
+    pub fn isOffTheEdge(self: Self, rect: *Rectangle) bool {
+        return self.getRightEdge() < rect.getPosition().x or self.rect.getPosition().x > rect.getRightEdge();
+    }
+    pub fn isOnSurface(self: Self, rect: *Rectangle) bool {
+        // Rectangle.rect.getPosition().y - self.player.rect.height == self.player.rect.getPosition().y
+        // 1. Check Horizontal (Aligned)
+        if (!self.isWithinHorizontalBounds(rect)) return false;
+
+        // 2. Check Vertical (Touching Surface)
+        const pBottom = self.player.rect.getBottomEdge();
+        const platTop = rect.getTopEdge();
+
+        // Check if rect's feet are within 1 pixel of the platform top
+        const touchingSurface = @abs(pBottom - platTop) < 1.0;
+        return touchingSurface;
+    }
+    ///self.rect.getRightEdge() >= rect.getLeftEdge();
+    pub fn ccollidedWithLeftEdge(self: Self, rect: *Rectangle) bool {
+        return self.getRightEdge() >= rect.getLeftEdge();
+    }
+    ///self.rect.getLeftEdge() <= rect.getRightEdge();
+    pub fn collidedWithRightEdge(self: Self, rect: *Rectangle) bool {
+        return self.getLeftEdge() <= rect.getRightEdge();
+    }
+    ///self.rect.getTopEdge() >= rect.getBottomEdge();
+    pub fn collidedWithBottom(self: Self, rect: *Rectangle) bool {
+        return self.getTopEdge() >= rect.getBottomEdge();
+    }
+    ///self.rect.getBottomEdge() >= rect.getTopEdge();
+    pub fn collidedWithTop(self: Self, rect: *Rectangle) bool {
+        return self.getBottomEdge() >= rect.getTopEdge();
+    }
     fn setDamageAmount(self: *Self) void {
         switch (self.objectType) {
             // Use the capture syntax |value| to get the data inside
@@ -160,6 +197,7 @@ pub const Rectangle = struct {
                             false,
                             false,
                             false,
+                            true,
                             DamageComponent.init(
                                 10.0,
                                 false,
