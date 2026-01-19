@@ -4,7 +4,7 @@ const GAME_OBJECT_TYPES = @import("../types.zig").GAME_OBJECT_TYPES;
 const rayLib = @import("raylib");
 const ENEMY_TYPES = @import("../types.zig").ENEMY_TYPES;
 const ENEMY_STATE = @import("../types.zig").ENEMEY_STATE;
-const TILE_SIZE_F32 = @import("../types.zig").TILE_SIZE_F32;
+const TILE_SIZE_F = @import("../types.zig").TILE_SIZE_F;
 const VELOCITY = @import("../types.zig").VELOCITY;
 const DIRECTION = @import("../types.zig").DIRECTION;
 const TImer = @import("../utils/utils.zig").Timer();
@@ -31,8 +31,8 @@ pub const Enemy = struct {
             .allocator = allocator,
             .rect = Rectangle.init(
                 GAME_OBJECT_TYPES{ .ENEMY = enemyType },
-                TILE_SIZE_F32,
-                TILE_SIZE_F32,
+                TILE_SIZE_F,
+                TILE_SIZE_F,
                 position,
                 .red,
             ),

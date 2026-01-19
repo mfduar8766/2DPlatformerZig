@@ -13,10 +13,17 @@ const ObjectProperties = @import("../common/objectProperties.zig").ObjectPropert
 const LevelBluePrintMappingObjectTypes = @import("./world.zig").LevelBluePrintMappingObjectTypes;
 const Widgets = @import("./widgets.zig").Widgets;
 const EnemyAI = @import("../common/AI.zig").CreateEnemyAI();
+const TILE_SIZE_F = @import("../types.zig").TILE_SIZE_F;
+const TILE_SIZE = @import("../types.zig").TILE_SIZE;
 
 pub const Config = struct {
     const Self = @This();
-    fps: i32,
+    // WINDOW_HEIGHT: i32 = 2500,
+    // WINDOW_WIDTH: i32 = 1500,
+    // WINDOW_DIVISOR: i32 = 2,
+    tileSize: i32 = TILE_SIZE,
+    tileSizeF: f32 = TILE_SIZE_F,
+    fps: i32 = 60,
     windowWidth: i32,
     windowHeight: i32,
     windowTitle: [:0]const u8,
@@ -138,7 +145,7 @@ pub const Game = struct {
         // --- VERTICAL COLLISIONS (Falling) ---
         if (velY >= 0.0) {
             // Find the top edge of the tile grid row the feet are currently in
-            const gridY = @floor(pBottomEdge / 32.0) * 32.0;
+            const gridY = @floor(pBottomEdge / TILE_SIZE_F) * TILE_SIZE_F;
             if (bottomLeft == 1 or bottomRight == 1) {
                 // GROUND: Standard collision at the grid line
                 if (pBottomEdge >= gridY) {
@@ -183,8 +190,8 @@ pub const Game = struct {
                 }
             } else if (middleRight == 5 or middleRight == 3) {
                 // FALLING AND MOVE RIGHT AND COLLIDE WITH AN OBJECT
-                const leftEdgeOfGrid = @floor(pRightEdge / 32.0) * 32.0;
-                const bottomOfGridElement = @floor(pTopEdge / 32.0) * 32.0;
+                const leftEdgeOfGrid = @floor(pRightEdge / TILE_SIZE_F) * TILE_SIZE_F;
+                const bottomOfGridElement = @floor(pTopEdge / TILE_SIZE_F) * TILE_SIZE_F;
                 if (pRightEdge >= leftEdgeOfGrid and pTopEdge >= bottomOfGridElement) {
                     self.handleCollisionss(
                         dt,
@@ -197,8 +204,8 @@ pub const Game = struct {
                 }
             } else if (middleLeft == 5 or middleLeft == 3) {
                 // FALLING AND MOVE LEFT AND COLLIDE WITH ANY OBJECT
-                const rightEdgeOfGrid = @floor(pLeftEdge / 32.0) * 32.0;
-                const bottomOfGridElement = @floor(pTopEdge / 32.0) * 32.0;
+                const rightEdgeOfGrid = @floor(pLeftEdge / TILE_SIZE_F) * TILE_SIZE_F;
+                const bottomOfGridElement = @floor(pTopEdge / TILE_SIZE_F) * TILE_SIZE_F;
                 if (pLeftEdge >= rightEdgeOfGrid and pTopEdge >= bottomOfGridElement) {
                     self.handleCollisionss(
                         dt,
@@ -219,8 +226,8 @@ pub const Game = struct {
         else if (velY < 0.0) {
             if (middleRight == 5 or middleRight == 3) {
                 // JUMPING AND MOVE RIGHT AND COLLIDE WITH AN OBJECT
-                const leftEdgeOfGrid = @floor(pRightEdge / 32.0) * 32.0;
-                const topOfGridElement = @floor(pBottomEdge / 32.0) * 32.0;
+                const leftEdgeOfGrid = @floor(pRightEdge / TILE_SIZE_F) * TILE_SIZE_F;
+                const topOfGridElement = @floor(pBottomEdge / TILE_SIZE_F) * TILE_SIZE_F;
                 if (pRightEdge >= leftEdgeOfGrid and pTopEdge <= topOfGridElement) {
                     self.handleCollisionss(
                         dt,
@@ -232,10 +239,10 @@ pub const Game = struct {
                     );
                 }
                 //TODO: Add wall bounce effect here if desired and check for soid property some walls are not solid
-            } else if ((middleLeft == 5 and self.world.getObjectProperties(5).?.isSolid) or (middleLeft == 3 and self.world.getObjectProperties(3).?.isSolid)) {
+            } else if (middleLeft == 5 or middleLeft == 3) {
                 // JUMPING AND MOVE LEFT AND COLLIDE WITH ANY OBJECT
-                const rightEdgeOfGrid = @floor(pLeftEdge / 32.0) * 32.0;
-                const topOfGridElement = @floor(pBottomEdge / 32.0) * 32.0;
+                const rightEdgeOfGrid = @floor(pLeftEdge / TILE_SIZE_F) * TILE_SIZE_F;
+                const topOfGridElement = @floor(pBottomEdge / TILE_SIZE_F) * TILE_SIZE_F;
                 if (pLeftEdge >= rightEdgeOfGrid and pTopEdge <= topOfGridElement) {
                     self.handleCollisionss(
                         dt,
@@ -249,7 +256,7 @@ pub const Game = struct {
             } else if (topLeftCeil == 3 or topRight == 3 or topLeftCeil == 5 or topRight == 5) {
                 // HEAD BUMP: Check if top hits a solid tile (ID 3 or 5)
                 const id = if (topLeftCeil != 0) topLeftCeil else topRight;
-                const ceilLine = @ceil(pY / 32.0) * 32.0;
+                const ceilLine = @ceil(pY / TILE_SIZE_F) * TILE_SIZE_F;
                 self.handleCollisionss(
                     dt,
                     .HEAD_BUMP,
@@ -264,24 +271,27 @@ pub const Game = struct {
         // --- HORIZONTAL COLLISIONS (Walls) ---
         // if (vel_x > 0) {
         //     if (middleRight == 3 or topRight == 3 or bottomRight == 3) {
-        //         const wallX = @floor((pRightEdge) / 32.0) * 32.0;
+        //         const wallX = @floor((pRightEdge) / TILE_SIZE_F) * TILE_SIZE_F;
         //         self.player.rect.setPosition(.X, wallX - p_w);
         //         self.player.setVelocity(.X, 0);
         //     }
         // }
         // if (vel_x > 0) {
         //     if (middleRight == 3 or topRight == 3 or bottomRight == 3) {
-        //         const wallX = @floor((pRightEdge) / 32.0) * 32.0;
+        //         const wallX = @floor((pRightEdge) / TILE_SIZE_F) * TILE_SIZE_F;
         //         self.player.rect.setPosition(.X, wallX - p_w);
         //         self.player.setVelocity(.X, 0);
         //     }
         // } else if (vel_x < 0) {
         //     if (middleLeft == 3 or topLeft == 3 or bottomLeft == 3) {
-        //         const wallX = @ceil(p_x / 32.0) * 32.0;
+        //         const wallX = @ceil(p_x / TILE_SIZE_F) * TILE_SIZE_F;
         //         self.player.rect.setPosition(.X, wallX);
         //         self.player.setVelocity(.X, 0);
         //     }
         // }
+    }
+    fn checkIfSolid(self: *Self, value: u8) bool {
+        return self.world.getObjectProperties(value).?.isSolid;
     }
     fn checkCollisionEnemies(self: *Self, dt: f32, pLeftEdge: f32, pRightEdge: f32, position: POSITION) void {
         if (position == .Y) {

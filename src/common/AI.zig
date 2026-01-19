@@ -1,7 +1,7 @@
 const Enemy = @import("../game/enemies.zig").Enemy;
 const rayLib = @import("raylib");
 const std = @import("std");
-const TILE_SIZE_F32 = @import("../types.zig").TILE_SIZE_F32;
+const TILE_SIZE_F = @import("../types.zig").TILE_SIZE_F;
 
 pub fn CreateEnemyAI() AI(*Enemy) {
     return AI(*Enemy).init();
@@ -103,22 +103,22 @@ fn MoveTowardsPlayer(comptime T: type) type {
                         enemy.startCoolDown();
                     }
                     if (playerX < enemyX) {
-                        if (dx < attackRange and dy < TILE_SIZE_F32) {
+                        if (dx < attackRange and dy < TILE_SIZE_F) {
                             enemy.update(dt, playerPosition, .ATTACK, .LEFT);
-                        } else if (dx > attackRange and dy < TILE_SIZE_F32 and objectType.enemyState == .ATTACK) {
+                        } else if (dx > attackRange and dy < TILE_SIZE_F and objectType.enemyState == .ATTACK) {
                             enemy.update(dt, playerPosition, .PATROL, .LEFT);
                         }
                     } else if (playerX > enemyX) {
                         std.debug.print("GREATER\n", .{});
-                        if (dx < attackRange and dy < TILE_SIZE_F32) {
+                        if (dx < attackRange and dy < TILE_SIZE_F) {
                             enemy.update(dt, playerPosition, .ATTACK, .RIGHT);
-                        } else if (dx > attackRange and dy < TILE_SIZE_F32 and objectType.enemyState == .ATTACK) {
+                        } else if (dx > attackRange and dy < TILE_SIZE_F and objectType.enemyState == .ATTACK) {
                             enemy.update(dt, playerPosition, .PATROL, .RIGHT);
                         }
                     }
-                    // if (dx < attackRange and dy < TILE_SIZE_F32) {
+                    // if (dx < attackRange and dy < TILE_SIZE_F) {
                     //     enemy.update(dt, playerPosition, .ATTACK);
-                    // } else if (dx > attackRange and dy < TILE_SIZE_F32 and objectType.enemyState == .ATTACK) {
+                    // } else if (dx > attackRange and dy < TILE_SIZE_F and objectType.enemyState == .ATTACK) {
                     //     enemy.update(dt, playerPosition, .PATROL);
                     // }
                     // enemy.update(dt, playerPosition, .IDEL);

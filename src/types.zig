@@ -3,7 +3,7 @@ pub const SCREEN_WIDTH: i32 = 1500;
 pub const SCREEN_DIVISOR: i32 = 2;
 pub const GRAVITY: f32 = 100.0;
 pub const TILE_SIZE: usize = 32;
-pub const TILE_SIZE_F32 = 32.0;
+pub const TILE_SIZE_F = 32.0;
 
 pub const LogLevels = enum(u6) {
     INFO = 0,
