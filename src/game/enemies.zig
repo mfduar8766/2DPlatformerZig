@@ -15,14 +15,15 @@ pub const Enemy = struct {
     rect: Rectangle,
     isDynamic: bool = false,
     index: usize = 0,
-    // enemyAI: EnemyAI = undefined,
     enemyState: ENEMY_STATE = .IDEL,
     hp: f32 = 100.0,
-    speedMultiplier: f32 = 2.0,
+    speedMultiplier: f32 = 1.5,
     velocityX: f32 = 0.0,
     velocityY: f32 = 0.0,
     speed: f32 = 100.0,
-    coolDownTimer: TImer = TImer.init(2.0),
+    coolDownTimer: TImer = TImer.init(1.3),
+    isPatroling: bool = false,
+    shouldBaclkOff: bool = false,
 
     pub fn init(allocator: std.mem.Allocator, index: usize, enemyType: ENEMY_TYPES, position: rayLib.Vector2, isDynamic: ?bool) !*Self {
         const enemyPtr = try allocator.create(Self);
@@ -49,11 +50,9 @@ pub const Enemy = struct {
             if (direction == .LEFT) {
                 self.velocityX = self.speed;
                 self.rect.subtractPosition(.X, self.velocityX * self.speedMultiplier * dt);
-                self.velocityX = 0.0;
             } else if (direction == .RIGHT) {
                 self.velocityX = self.speed;
                 self.rect.addPosition(.X, self.velocityX * self.speedMultiplier * dt);
-                self.velocityX = 0.0;
             }
         } else if (state == .PATROL) {
             self.velocityX = self.speed;
@@ -82,13 +81,27 @@ pub const Enemy = struct {
             return self.velocityY;
         }
     }
-    pub fn startCoolDown(self: *Self) void {
-        self.coolDownTimer.start();
-        if (self.coolDownTimer.hasElapsed()) {
+    pub fn handleCoolDown(self: *Self, dt: f32, direction: DIRECTION) void {
+        if (!self.coolDownTimer.isRunning()) {
+            self.coolDownTimer.start();
+            self.enemyState = .COOL_DOWN;
+        }
+        if (!self.coolDownTimer.hasElapsed()) {
+            if (direction == .LEFT) {
+                self.velocityX = self.speed;
+                self.rect.addPosition(.X, self.velocityX * self.speedMultiplier * dt);
+            } else if (direction == .RIGHT) {
+                self.velocityX = self.speed;
+                self.rect.subtractPosition(.X, self.velocityX * self.speedMultiplier * dt);
+            }
+        } else {
             self.enemyState = .IDEL;
             self.velocityX = 0.0;
             self.coolDownTimer.reset();
         }
+    }
+    pub fn resetCoolDownTimer(self: *Self) void {
+        self.coolDownTimer.reset();
     }
     // fn attack(self: *Self) void {
 

@@ -207,6 +207,7 @@ pub const Rectangle = struct {
                     .MED => {},
                     .HIGH => {},
                     .BOSS => {},
+                    .PATROL => {},
                 }
             },
             else => |_| {},

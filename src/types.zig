@@ -81,6 +81,7 @@ pub const ENEMY_TYPES = enum(u8) {
     MED = 1,
     HIGH = 2,
     BOSS = 3,
+    PATROL = 4,
 };
 
 pub const UI_TYPES = enum(u2) {
@@ -130,4 +131,5 @@ pub const ENEMEY_STATE = enum(u8) {
     ALERT = 3,
     ATTACK = 4,
     DEAD = 5,
+    COOL_DOWN = 6,
 };

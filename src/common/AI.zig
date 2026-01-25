@@ -2,9 +2,12 @@ const Enemy = @import("../game/enemies.zig").Enemy;
 const rayLib = @import("raylib");
 const std = @import("std");
 const TILE_SIZE_F = @import("../types.zig").TILE_SIZE_F;
+const Utils = @import("../utils//utils.zig");
 
-pub fn CreateEnemyAI() AI(*Enemy) {
-    return AI(*Enemy).init();
+pub const EnemyAIType = AI(*Enemy);
+
+pub fn CreateEnemyAI(allocator: std.mem.Allocator) !EnemyAIType {
+    return try AI(*Enemy).init(allocator);
 }
 
 ///This is the interface for the entity behavior
@@ -13,25 +16,28 @@ fn AI(comptime T: type) type {
         const Self = @This();
         sequence: Sequence(T),
         checkHealth: CheckHealth(T),
-        moveTowardsPlayer: MoveTowardsPlayer(T),
+        movement: Movement(T),
 
-        pub fn init() Self {
+        pub fn init(allocator: std.mem.Allocator) !Self {
+            const children = try allocator.alloc(AI(T), 2);
+            children[0] = .{ .checkHealth = CheckHealth(T).init() };
+            children[1] = .{ .movement = Movement(T).init() };
             return Self{
-                .sequence = .{
-                    .children = &[_]AI(T){
-                        .{ .checkHealth = .{ .hp = 100.0 } },
-                        .{ .moveTowardsPlayer = .{} },
-                    },
-                },
+                .sequence = Sequence(T).init(allocator, children),
             };
         }
-        pub fn update(self: Self, dt: f32, playerLocation: rayLib.Vector2, objectType: T) void {
-            return switch (self) {
-                // "payload" is the specific struct instance (Sequence, CheckHealth, etc.)
-                .sequence => |payload| payload.update(dt, playerLocation, objectType),
-                .checkHealth => |payload| payload.update(dt, playerLocation, objectType),
-                .moveTowardsPlayer => |payload| payload.update(dt, playerLocation, objectType),
-            };
+        pub fn deinit(self: *Self) void {
+            switch (self.*) {
+                .sequence => |*payload| payload.deinit(),
+                else => {},
+            }
+        }
+        pub fn update(self: *Self, dt: f32, playerLocation: rayLib.Vector2, objectType: T) void {
+            switch (self.*) {
+                .sequence => |*payload| payload.update(dt, playerLocation, objectType),
+                .checkHealth => |*payload| payload.update(dt, playerLocation, objectType),
+                .movement => |*payload| payload.update(dt, playerLocation, objectType),
+            }
         }
     };
 }
@@ -39,16 +45,25 @@ fn AI(comptime T: type) type {
 fn Sequence(comptime T: type) type {
     return struct {
         const Self = @This();
-        children: []const AI(T),
+        children: []AI(T),
+        allocator: std.mem.Allocator,
 
-        pub fn update(self: Self, dt: f32, playerLocation: rayLib.Vector2, objectType: T) void {
-            // std.debug.print("[Sequence] - calling sequence...\n", .{});
-            for (self.children) |child| {
+        pub fn init(allocator: std.mem.Allocator, children: []AI(T)) Self {
+            return Self{
+                .children = children,
+                .allocator = allocator,
+            };
+        }
+        pub fn deinit(self: *Self) void {
+            for (self.children) |*child| {
+                child.deinit();
+            }
+            // Then free the slice itself
+            self.allocator.free(self.children);
+        }
+        pub fn update(self: *Self, dt: f32, playerLocation: rayLib.Vector2, objectType: T) void {
+            for (self.children) |*child| {
                 child.update(dt, playerLocation, objectType);
-                // const status = child.update(dt, playerLocation, enemy);
-                // if (status == .ALERT) {
-                //     //
-                // }
             }
         }
     };
@@ -57,16 +72,19 @@ fn Sequence(comptime T: type) type {
 fn CheckHealth(comptime T: type) type {
     return struct {
         const Self = @This();
-        hp: f32 = 100.0,
+        const maxHp: f32 = 100.0;
+        const oneForthHp: f32 = maxHp / 4.0;
+        const halfHp: f32 = maxHp / 2.0;
 
-        pub fn update(_: Self, _: f32, _: rayLib.Vector2, objectType: T) void {
-            // std.debug.print("[CheckHealth] - dt: {d}, pLocation: {any} Checking Health (HP: {d:.0})... ", .{ dt, playerLocation, self.hp });
-            // std.debug.print("OK.\n", .{});
-            // std.debug.print("TOO LOW.\n", .{});
+        pub fn init() Self {
+            return Self{};
+        }
+
+        pub fn update(_: *Self, _: f32, _: rayLib.Vector2, objectType: T) void {
             switch (@TypeOf(objectType)) {
                 *Enemy => {
                     var enemy = @as(*Enemy, objectType);
-                    if (enemy.hp <= 20.0) {
+                    if (enemy.hp == halfHp) {} else if (enemy.hp <= oneForthHp) {
                         enemy.enemyState = .ALERT;
                     } else if (enemy.hp <= 0) {
                         enemy.enemyState = .DEAD;
@@ -78,59 +96,69 @@ fn CheckHealth(comptime T: type) type {
     };
 }
 
-fn MoveTowardsPlayer(comptime T: type) type {
+fn Movement(comptime T: type) type {
     return struct {
         const Self = @This();
-        const attackRange: f32 = 200.0;
+        const attackRange: f32 = 150.0;
+        const alertRange: f32 = 200.0;
         const outOfRange: f32 = 250.0;
-        pub fn update(_: Self, dt: f32, playerPosition: rayLib.Vector2, objectType: T) void {
+        timer: Utils.Timer() = Utils.Timer().init(3.0),
+        isPlayerOnGroundLevel: bool = true,
+
+        pub fn init() Self {
+            return Self{};
+        }
+
+        pub fn update(self: *Self, dt: f32, playerPosition: rayLib.Vector2, objectType: T) void {
             const playerX = playerPosition.x;
             const playerY = playerPosition.y;
             switch (@TypeOf(objectType)) {
                 *Enemy => {
                     var enemy = @as(*Enemy, objectType);
                     const enemyX = enemy.getRect().getPosition().x;
-                    // const enemyY = enemy.getRect().getPosition().y;
+                    const enemyY = enemy.getRect().getPosition().y;
                     const dx = @abs(playerX - enemy.getRect().getPosition().x);
-                    const dy = @abs(playerY - enemy.getRect().getPosition().y);
-                    // std.debug.print("[MoveTowardsPlayer] Pathfinding to player. state: {any} playerPos: {any} enemyLocation: {any} DX: {d}\n", .{
-                    //     objectType.enemyState,
-                    //     playerPosition,
-                    //     enemy.getRect().getPosition(),
-                    //     dx,
-                    // });
-                    if (enemy.enemyState != .IDEL or enemy.enemyState != .DEAD) {
-                        if (dx >= outOfRange) {
-                            std.debug.print("OUT-OF-RANGE player. state: {any} playerPos: {any} enemyLocation: {any} DX: {d}, outOfRange: {d}\n", .{
-                                objectType.enemyState,
-                                playerPosition,
-                                enemy.getRect().getPosition(),
-                                dx,
-                                outOfRange,
-                            });
-                            enemy.startCoolDown();
-                        } else if (playerX < enemyX) {
-                            if (dx < attackRange and dy < TILE_SIZE_F) {
-                                enemy.update(dt, playerPosition, .ATTACK, .LEFT);
-                            } else if (dx > attackRange and dy < TILE_SIZE_F and objectType.enemyState == .ATTACK) {
-                                enemy.update(dt, playerPosition, .PATROL, .LEFT);
+                    self.isPlayerOnGroundLevel = playerY == enemyY;
+                    // const dy = @abs(playerY - enemy.getRect().getPosition().y);
+                    std.debug.print("state: {} isOnGround: {} playerX: {d} playerY: {d} enemyX: {d} enemyY: {d} DX: {d}\n", .{
+                        enemy.enemyState,
+                        self.isPlayerOnGroundLevel,
+                        playerX,
+                        playerY,
+                        enemyX,
+                        enemyY,
+                        dx,
+                    });
+                    if (enemy.enemyState != .DEAD) {
+                        if (enemy.enemyState == .ALERT or enemy.enemyState == .ATTACK) {
+                            if (self.isPlayerOnGroundLevel and self.timer.isRunning()) {
+                                self.timer.reset();
+                                enemy.resetCoolDownTimer();
                             }
-                        } else if (playerX > enemyX) {
-                            std.debug.print("GREATER\n", .{});
-                            if (dx < attackRange and dy < TILE_SIZE_F) {
-                                enemy.update(dt, playerPosition, .ATTACK, .RIGHT);
-                            } else if (dx > attackRange and dy < TILE_SIZE_F and objectType.enemyState == .ATTACK) {
-                                enemy.update(dt, playerPosition, .PATROL, .RIGHT);
+                            if (!self.isPlayerOnGroundLevel and !self.timer.isRunning()) {
+                                std.debug.print("STARAT-TIMER\n", .{});
+                                self.timer.start();
+                                if (self.timer.hasElapsed()) {
+                                    std.debug.print("ELLAPSED\n", .{});
+                                    self.timer.reset();
+                                    enemy.handleCoolDown(dt, if (playerX < enemyX) .LEFT else .RIGHT);
+                                }
+                            }
+                            if (dx >= outOfRange) {
+                                enemy.handleCoolDown(dt, if (playerX < enemyX) .LEFT else .RIGHT);
+                            }
+                        }
+                        if (enemy.enemyState == .COOL_DOWN) {
+                            enemy.handleCoolDown(dt, if (playerX < enemyX) .LEFT else .RIGHT);
+                        }
+                        if (enemy.enemyState != .COOL_DOWN) {
+                            if (dx < outOfRange and dx >= alertRange) {
+                                enemy.update(dt, playerPosition, .ALERT, if (playerX < enemyX) .LEFT else .RIGHT);
+                            } else if (dx < alertRange and dx <= attackRange) {
+                                enemy.update(dt, playerPosition, .ATTACK, if (playerX < enemyX) .LEFT else .RIGHT);
                             }
                         }
                     }
-
-                    // if (dx < attackRange and dy < TILE_SIZE_F) {
-                    //     enemy.update(dt, playerPosition, .ATTACK);
-                    // } else if (dx > attackRange and dy < TILE_SIZE_F and objectType.enemyState == .ATTACK) {
-                    //     enemy.update(dt, playerPosition, .PATROL);
-                    // }
-                    // enemy.update(dt, playerPosition, .IDEL);
                 },
                 else => {},
             }

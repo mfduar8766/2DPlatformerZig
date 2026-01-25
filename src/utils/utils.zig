@@ -887,6 +887,9 @@ pub fn Timer() type {
                 self.elapsedTime = rayLib.getTime() - self.startTime;
             }
         }
+        pub fn isRunning(self: *Self) bool {
+            return self.startTime != 0.0 and self.elapsedTime < self.endTime;
+        }
         pub fn hasElapsed(self: *Self) bool {
             return self.elapsedTime >= self.endTime;
         }

@@ -12,9 +12,11 @@ const World = @import("./world.zig").World;
 const ObjectProperties = @import("../common/objectProperties.zig").ObjectProperties;
 const LevelBluePrintMappingObjectTypes = @import("./world.zig").LevelBluePrintMappingObjectTypes;
 const Widgets = @import("./widgets.zig").Widgets;
-const EnemyAI = @import("../common/AI.zig").CreateEnemyAI();
+// var EnemyAI = @import("../common/AI.zig").CreateEnemyAI();
+const EnemyAI = @import("../common/AI.zig").CreateEnemyAI;
 const TILE_SIZE_F = @import("../types.zig").TILE_SIZE_F;
 const TILE_SIZE = @import("../types.zig").TILE_SIZE;
+const EnemyAIType = @import("../common/AI.zig").EnemyAIType;
 
 pub const Config = struct {
     const Self = @This();
@@ -50,6 +52,7 @@ pub const Game = struct {
     isGameOver: bool = false,
     currentTime: f64 = 0.0,
     world: *World(totalLevels, 0) = undefined,
+    enemyAI: EnemyAIType = undefined,
 
     pub fn init(allocator: std.mem.Allocator) !*Self {
         const gamePtr = try allocator.create(Self);
@@ -62,6 +65,7 @@ pub const Game = struct {
     }
     pub fn deinit(self: *Self) void {
         self.world.deinit();
+        self.enemyAI.deinit();
         self.player.deinit();
         self.allocator.destroy(self);
     }
@@ -79,7 +83,7 @@ pub const Game = struct {
                 screenH - 100.0, // Player pinned near bottom
             ),
             .rotation = 0.0,
-            .zoom = 2.0, // impacts how much of the world if visible. Since my world is 32x32 a zoom of 1 is to much
+            .zoom = 1.6, // impacts how much of the world if visible. Since my world is 32x32 a zoom of 1 is to much
         };
         // std.debug.print("LLL: {any}\n", .{@intFromEnum(LevelBluePrintMappingObjectTypes.GROUND)});
         while (!rayLib.windowShouldClose()) {
@@ -93,6 +97,7 @@ pub const Game = struct {
         self.widgets = Widgets.init();
         self.player = try Player.init(self.allocator, self.config);
         self.world = try World(totalLevels, 0).init(self.allocator);
+        self.enemyAI = try EnemyAI(self.allocator);
     }
     fn update(self: *Self, dt: f32) !void {
         self.player.handleMovement(dt, self.world.getRect());
@@ -104,7 +109,39 @@ pub const Game = struct {
             try self.world.loadLevel(nextLevelIndex);
         }
         if (nextLevelIndex == self.world.getLevelIndex()) {
+            const pLeftEdge = self.player.getRect().getLeftEdge();
+            const pRightEdge = self.player.getRect().getRightEdge();
             self.checkForCollisions(dt);
+            for (self.world.enemies.items) |enemy| {
+                self.enemyAI.update(
+                    dt,
+                    self.player.getRect().getPosition(),
+                    enemy,
+                );
+                if (self.player.getIsOnGround()) {
+                    if (pLeftEdge <= enemy.rect.getLeftEdge() and self.player.getRect().ccollidedWithLeftEdge(&enemy.rect)) {
+                        self.handleCollisionss(
+                            dt,
+                            .ENEMY_BODY,
+                            enemy.rect.getLeftEdge(),
+                            &enemy.rect.objectProperties,
+                            .X,
+                            .RIGHT,
+                        );
+                        break;
+                    } else if (pRightEdge >= enemy.rect.getLeftEdge() and self.player.getRect().collidedWithRightEdge(&enemy.rect)) {
+                        self.handleCollisionss(
+                            dt,
+                            .ENEMY_BODY,
+                            enemy.rect.getRightEdge(),
+                            &enemy.rect.objectProperties,
+                            .X,
+                            .LEFT,
+                        );
+                        break;
+                    }
+                }
+            }
         }
     }
     fn checkForCollisions(self: *Self, dt: f32) void {
@@ -135,13 +172,16 @@ pub const Game = struct {
         const middleLeft = self.world.getTilesAt(pX, pY + (pH / 2));
         const middleRight = self.world.getTilesAt(pRightEdge, pY + (pH / 2));
         const velY = self.player.getVelocity(.Y);
-        const velX = self.player.getVelocity(.X);
+        // const velX = self.player.getVelocity(.X);
 
-        if (velX > 0.0 and 0.0 == velY) {
-            self.checkCollisionEnemies(dt, pLeftEdge, pRightEdge, .X);
-        } else if (velX <= 0.0 and 0.0 == velY) {
-            self.checkCollisionEnemies(dt, pLeftEdge, pRightEdge, .X);
-        }
+        // if (0.0 == velY) {
+        //     if (velX > 0.0) {
+        //         self.checkCollisionEnemies(dt, pLeftEdge, pRightEdge, .X);
+        //     } else if (velX <= 0.0) {
+        //         self.checkCollisionEnemies(dt, pLeftEdge, pRightEdge, .X);
+        //     }
+        // }
+
         // --- VERTICAL COLLISIONS (Falling) ---
         if (velY >= 0.0) {
             // Find the top edge of the tile grid row the feet are currently in
@@ -219,7 +259,7 @@ pub const Game = struct {
             } else {
                 // AIR: Nothing below feet
                 self.player.setIsOnGround(false);
-                self.checkCollisionEnemies(dt, 0.0, 0.0, .Y);
+                // self.checkCollisionEnemies(dt, 0.0, 0.0, .Y);
             }
         }
         // --- VERTICAL COLLISIONS Jumping ---
