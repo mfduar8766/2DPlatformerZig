@@ -149,7 +149,7 @@ pub const Rectangle = struct {
         return touchingSurface;
     }
     ///self.rect.getRightEdge() >= rect.getLeftEdge();
-    pub fn ccollidedWithLeftEdge(self: Self, rect: *Rectangle) bool {
+    pub fn collidedWithLeftEdge(self: Self, rect: *Rectangle) bool {
         return self.getRightEdge() >= rect.getLeftEdge();
     }
     ///self.rect.getLeftEdge() <= rect.getRightEdge();

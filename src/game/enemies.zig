@@ -82,8 +82,8 @@ pub const Enemy = struct {
         }
     }
     pub fn handleCoolDown(self: *Self, dt: f32, direction: DIRECTION) void {
-        if (!self.coolDownTimer.isRunning()) {
-            self.coolDownTimer.start();
+        self.coolDownTimer.start();
+        if (self.enemyState != .COOL_DOWN) {
             self.enemyState = .COOL_DOWN;
         }
         if (!self.coolDownTimer.hasElapsed()) {
@@ -100,8 +100,8 @@ pub const Enemy = struct {
             self.coolDownTimer.reset();
         }
     }
-    pub fn resetCoolDownTimer(self: *Self) void {
-        self.coolDownTimer.reset();
+    pub fn getCoolDownTimer(self: *Self) *TImer {
+        return &self.coolDownTimer;
     }
     // fn attack(self: *Self) void {
 

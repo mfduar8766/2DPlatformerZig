@@ -400,7 +400,6 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
             index: usize,
         ) !void {
             if (gridCharacterLocation == CHAR_ENEMY) {
-                std.debug.print("INDEX: {d}\n", .{index});
                 const global_x_offset = @as(f32, @floatFromInt(levelIndex * LEVEL_WIDTH));
                 const spawn_x = (@as(f32, @floatFromInt(col)) * TILE_SIZE_F) + global_x_offset;
                 const spawn_y = @as(f32, @floatFromInt(row)) * TILE_SIZE_F;
