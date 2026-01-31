@@ -12,8 +12,7 @@ const World = @import("./world.zig").World;
 const ObjectProperties = @import("../common/objectProperties.zig").ObjectProperties;
 const LevelBluePrintMappingObjectTypes = @import("./world.zig").LevelBluePrintMappingObjectTypes;
 const Widgets = @import("./widgets.zig").Widgets;
-// var EnemyAI = @import("../common/AI.zig").CreateEnemyAI();
-const EnemyAI = @import("../common/AI.zig").CreateEnemyAI;
+const EnemyAI = @import("../common/Entity.zig").CreateEnemyAI;
 const TILE_SIZE_F = @import("../types.zig").TILE_SIZE_F;
 const TILE_SIZE = @import("../types.zig").TILE_SIZE;
 const EnemyAIType = @import("../common/AI.zig").EnemyAIType;
@@ -117,48 +116,6 @@ pub const Game = struct {
         }
         if (nextLevelIndex == self.world.getLevelIndex()) {
             self.checkForCollisions(dt);
-            // const velX = self.player.getVelocity(.X);
-            // const velY = self.player.getVelocity(.Y);
-            // const pLeftEdge = self.player.getRect().getLeftEdge();
-            // const pRightEdge = self.player.getRect().getRightEdge();
-            // for (self.world.enemies.items) |enemy| {
-            //     // self.enemyAI.update(
-            //     //     dt,
-            //     //     &PlayerProps.init(
-            //     //         self.player.getRect().getPosition(),
-            //     //         self.player.onGround,
-            //     //     ),
-            //     //     enemy,
-            //     // );
-            //     if (0.0 == velY) {
-            //         if (velX > 0.0) {
-            //             if (pRightEdge >= enemy.rect.getLeftEdge() and self.player.getRect().collidedWithLeftEdge(enemy.getRect())) {
-            //                 std.debug.print("COLLIDE WITH RIGHT\n", .{});
-            //                 self.handleCollisionss(
-            //                     dt,
-            //                     .ENEMY_BODY,
-            //                     enemy.rect.getLeftEdge(),
-            //                     &enemy.rect.objectProperties,
-            //                     .X,
-            //                     .RIGHT,
-            //                 );
-            //                 break;
-            //             }
-            //         } else if (velX < 0.0) {
-            //             if (pLeftEdge <= enemy.rect.getRightEdge() and self.player.getRect().collidedWithRightEdge(enemy.getRect())) {
-            //                 self.handleCollisionss(
-            //                     dt,
-            //                     .ENEMY_BODY,
-            //                     enemy.rect.getRightEdge(),
-            //                     &enemy.rect.objectProperties,
-            //                     .X,
-            //                     .LEFT,
-            //                 );
-            //                 break;
-            //             }
-            //         }
-            //     }
-            // }
         }
     }
     fn checkForCollisions(self: *Self, dt: f32) void {
@@ -183,20 +140,14 @@ pub const Game = struct {
         //For Wall Detection (while moving):
         //You want to look slightly inside the player's height so you don't accidentally detect the floor as a wall.
         // const topLeftWall = self.world.getTilesAt(p_x + margin, p_y + 2.0);
-        const topRight = self.world.getTilesAt(pRightEdge - margin, pY);
+        // const topRight = self.world.getTilesAt(pRightEdge - margin, pY);
+        const topRightCeil = self.world.getTilesAt(pRightEdge + margin, pY - 1.0);
         const bottomLeft = self.world.getTilesAt(pX + margin, pBottomEdge);
         const bottomRight = self.world.getTilesAt(pRightEdge - margin, pBottomEdge);
         const middleLeft = self.world.getTilesAt(pX, pY + (pH / 2));
         const middleRight = self.world.getTilesAt(pRightEdge, pY + (pH / 2));
         const velY = self.player.getVelocity(.Y);
         const velX = self.player.getVelocity(.X);
-        // if (0.0 == velY) {
-        //     if (velX > 0.0) {
-        //         self.checkCollisionEnemies(dt, pLeftEdge, pRightEdge, .X);
-        //     } else if (velX <= 0.0) {
-        //         self.checkCollisionEnemies(dt, pLeftEdge, pRightEdge, .X);
-        //     }
-        // }
 
         // --- VERTICAL COLLISIONS (Falling) ---
         if (velY >= 0.0) {
@@ -275,7 +226,6 @@ pub const Game = struct {
             } else {
                 // AIR: Nothing below feet
                 self.player.setIsOnGround(false);
-                // self.checkCollisionEnemies(dt, 0.0, 0.0, .Y);
             }
         }
         // --- VERTICAL COLLISIONS Jumping ---
@@ -309,9 +259,9 @@ pub const Game = struct {
                         .LEFT,
                     );
                 }
-            } else if (topLeftCeil == 3 or topRight == 3 or topLeftCeil == 5 or topRight == 5) {
+            } else if (topLeftCeil == 3 or topRightCeil == 3 or topLeftCeil == 5 or topRightCeil == 5) {
                 // HEAD BUMP: Check if top hits a solid tile (ID 3 or 5)
-                const id = if (topLeftCeil != 0) topLeftCeil else topRight;
+                const id = if (topLeftCeil != 0) topLeftCeil else topRightCeil;
                 const ceilLine = @ceil(pY / TILE_SIZE_F) * TILE_SIZE_F;
                 self.handleCollisionss(
                     dt,
@@ -347,7 +297,12 @@ pub const Game = struct {
         // }
 
         // --- ENEMY COLLISIONS ---
+        self.checkCollisionEnemies(dt, velX, velY, pLeftEdge, pRightEdge);
+    }
+    fn checkCollisionEnemies(self: *Self, dt: f32, velX: f32, velY: f32, pLeftEdge: f32, pRightEdge: f32) void {
         for (self.world.enemies.items) |enemy| {
+            const leftEdge = enemy.rect.getLeftEdge();
+            const rightEdge = enemy.rect.getRightEdge();
             self.enemyAI.update(
                 dt,
                 &PlayerProps.init(
@@ -356,80 +311,65 @@ pub const Game = struct {
                 ),
                 enemy,
             );
+            if (velY > 0.0) {
+                if (self.player.getRect().collidedWithTop(enemy.getRect()) and
+                    (pRightEdge >= enemy.getRect().getLeftEdge() and pLeftEdge <= enemy.getRect().getRightEdge()))
+                {
+                    self.handleCollisionss(
+                        dt,
+                        .ENEMY_BODY,
+                        enemy.rect.getTopEdge(),
+                        &enemy.rect.objectProperties,
+                        .Y,
+                        null,
+                    );
+                    break;
+                }
+            }
             if (0.0 == velY) {
                 if (velX > 0.0) {
-                    if (pRightEdge >= enemy.rect.getLeftEdge() and self.player.getRect().collidedWithLeftEdge(enemy.getRect())) {
+                    //PLAYER IS MOVING RIGHT AND IS AHEAD OF ENEMY DO NOTHING
+                    if (pLeftEdge >= rightEdge) {
+                        break;
+                    } else if (pRightEdge >= leftEdge and self.player.getRect().collidedWithLeftEdge(enemy.getRect())) {
                         self.handleCollisionss(
                             dt,
                             .ENEMY_BODY,
-                            enemy.rect.getLeftEdge(),
+                            leftEdge,
                             &enemy.rect.objectProperties,
                             .X,
                             .RIGHT,
                         );
                         break;
                     }
-                } else if (velX <= 0.0) {
-                    if (pLeftEdge <= enemy.rect.getRightEdge() and self.player.getRect().collidedWithRightEdge(enemy.getRect())) {
+                } else if (velX < 0.0) {
+                    //PLAYER IS MOVING LEFT BUT IS BEHIND ENEMY DO NOTHING
+                    if (pRightEdge <= leftEdge) {
+                        break;
+                    }
+                    if (pLeftEdge <= rightEdge and self.player.getRect().collidedWithRightEdge(enemy.getRect())) {
                         self.handleCollisionss(
                             dt,
                             .ENEMY_BODY,
-                            enemy.rect.getRightEdge(),
+                            rightEdge,
                             &enemy.rect.objectProperties,
                             .X,
                             .LEFT,
                         );
                         break;
                     }
-                }
-            }
-        }
-    }
-    fn checkCollisionEnemies(self: *Self, dt: f32, pLeftEdge: f32, pRightEdge: f32, position: POSITION) void {
-        for (self.world.enemies.items) |enemy| {
-            if (position == .Y) {
-                if (enemy.isDynamic) {} else {
-                    if (enemy.rect.collidedWithBottom(self.player.getRect())) {
+                    //PLAYER IS MOVING LEFT AND IF AHEAD OF ENEMY BLOCK PLAYER FROM MOVING
+                    else if (pLeftEdge >= rightEdge and self.player.getRect().collidedWithRightEdge(enemy.getRect())) {
                         self.handleCollisionss(
                             dt,
                             .ENEMY_BODY,
-                            enemy.rect.getTopEdge(),
+                            leftEdge,
                             &enemy.rect.objectProperties,
-                            .Y,
-                            null,
+                            .X,
+                            .LEFT,
                         );
                         break;
                     }
-                }
-            } else {
-                self.enemyAI.update(
-                    dt,
-                    &PlayerProps.init(
-                        self.player.getRect().getPosition(),
-                        self.player.onGround,
-                    ),
-                    enemy,
-                );
-                if (pLeftEdge <= enemy.rect.getLeftEdge() and self.player.getRect().collidedWithLeftEdge(&enemy.rect)) {
-                    self.handleCollisionss(
-                        dt,
-                        .ENEMY_BODY,
-                        enemy.rect.getLeftEdge(),
-                        &enemy.rect.objectProperties,
-                        .X,
-                        .RIGHT,
-                    );
-                    break;
-                } else if (pRightEdge >= enemy.rect.getLeftEdge() and self.player.getRect().collidedWithRightEdge(&enemy.rect)) {
-                    self.handleCollisionss(
-                        dt,
-                        .ENEMY_BODY,
-                        enemy.rect.getRightEdge(),
-                        &enemy.rect.objectProperties,
-                        .X,
-                        .LEFT,
-                    );
-                    break;
                 }
             }
         }
@@ -485,14 +425,17 @@ pub const Game = struct {
                 if (direction) |dir| {
                     if (dir == .RIGHT) {
                         self.player.getRect().setPosition(position, objectPosition - self.player.getRect().getWidth());
+                        self.player.setVelocity(.X, 0.0);
                     } else if (dir == .LEFT) {
                         self.player.getRect().setPosition(position, objectPosition + self.player.getRect().getWidth());
+                        self.player.setVelocity(.X, 0.0);
                     }
                 } else {
                     self.player.getRect().setPosition(
                         position,
                         objectPosition - self.player.getRect().getHeight(),
                     );
+                    self.player.setVelocity(.Y, 0.0);
                 }
             },
             else => {},
@@ -562,14 +505,6 @@ pub const Game = struct {
                 enemy.draw();
             }
         }
-        // for (self.world.enemies.items) |enemy| {
-        //     const enemyCenterX = enemy.getRect().getCenterX();
-        //     const currentEnemyLocation = Utils.intFromFloat(usize, enemyCenterX / self.world.getLevelWidth());
-        //     const nextLevelIndex = @min(currentEnemyLocation, totalLevels - 1);
-        //     if (enemy.enemyState != .DEAD and nextLevelIndex == self.world.getLevelIndex()) {
-        //         enemy.draw();
-        //     }
-        // }
         self.player.draw();
         rayLib.endMode2D();
         self.widgets.draw();

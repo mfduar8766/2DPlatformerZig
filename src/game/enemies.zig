@@ -23,7 +23,6 @@ pub const Enemy = struct {
     speed: f32 = 100.0,
     coolDownTimer: TImer = TImer.init(1.3),
     isPatroling: bool = false,
-    shouldBaclkOff: bool = false,
 
     pub fn init(allocator: std.mem.Allocator, index: usize, enemyType: ENEMY_TYPES, position: rayLib.Vector2, isDynamic: ?bool) !*Self {
         const enemyPtr = try allocator.create(Self);
@@ -103,7 +102,4 @@ pub const Enemy = struct {
     pub fn getCoolDownTimer(self: *Self) *TImer {
         return &self.coolDownTimer;
     }
-    // fn attack(self: *Self) void {
-
-    // }
 };
