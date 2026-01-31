@@ -8,6 +8,7 @@ pub const ObjectProperties = struct {
     freeze: bool = false,
     instaKill: bool = false,
     slippery: bool = false,
+    isSolid: bool = false,
     damage: ?DamageComponent = null,
 
     pub fn init(
@@ -17,6 +18,7 @@ pub const ObjectProperties = struct {
         freeze: bool,
         instaKill: bool,
         slippery: bool,
+        isSolid: bool,
         damage: ?DamageComponent,
     ) Self {
         return .{
@@ -26,6 +28,7 @@ pub const ObjectProperties = struct {
             .freeze = freeze,
             .instaKill = instaKill,
             .slippery = slippery,
+            .isSolid = isSolid,
             .damage = damage,
         };
     }

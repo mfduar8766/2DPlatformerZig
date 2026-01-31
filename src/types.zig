@@ -3,7 +3,7 @@ pub const SCREEN_WIDTH: i32 = 1500;
 pub const SCREEN_DIVISOR: i32 = 2;
 pub const GRAVITY: f32 = 100.0;
 pub const TILE_SIZE: usize = 32;
-pub const TILE_SIZE_F32 = 32.0;
+pub const TILE_SIZE_F = 32.0;
 
 pub const LogLevels = enum(u6) {
     INFO = 0,
@@ -81,6 +81,7 @@ pub const ENEMY_TYPES = enum(u8) {
     MED = 1,
     HIGH = 2,
     BOSS = 3,
+    PATROL = 4,
 };
 
 pub const UI_TYPES = enum(u2) {
@@ -130,4 +131,5 @@ pub const ENEMEY_STATE = enum(u8) {
     ALERT = 3,
     ATTACK = 4,
     DEAD = 5,
+    COOL_DOWN = 6,
 };

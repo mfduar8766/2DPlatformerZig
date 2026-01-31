@@ -10,6 +10,7 @@ const Utils = @import("../utils/utils.zig");
 const Config = @import("./game.zig").Config;
 const POSITION = @import("../types.zig").POSITION;
 const ObjectProperties = @import("../common/objectProperties.zig").ObjectProperties;
+const TILE_SIZE_F = @import("../types.zig").TILE_SIZE_F;
 
 pub const Player = struct {
     const Self = @This();
@@ -39,11 +40,11 @@ pub const Player = struct {
             .allocator = allocator,
             .rect = Rectangle.init(
                 GAME_OBJECT_TYPES{ .PLAYER = 0 },
-                32.0,
-                32.0,
+                TILE_SIZE_F,
+                TILE_SIZE_F,
                 rayLib.Vector2.init(
                     0.0,
-                    Utils.floatFromInt(f32, rayLib.getScreenHeight()) - 32.0,
+                    Utils.floatFromInt(f32, rayLib.getScreenHeight()) - TILE_SIZE_F,
                 ),
                 .yellow,
             ),

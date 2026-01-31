@@ -8,7 +8,7 @@ const LEVEL_TYPEs = @import("../types.zig").LEVEL_TYPES;
 const ObjectProperties = @import("../common//objectProperties.zig").ObjectProperties;
 const DamageComponent = @import("../common/objectProperties.zig").DamageComponent;
 const TILE_SIZE = @import("../types.zig").TILE_SIZE;
-const TILE_SIZE_F32 = @import("../types.zig").TILE_SIZE_F32;
+const TILE_SIZE_F = @import("../types.zig").TILE_SIZE_F;
 
 const CHAR_EMPTY_SPACE: u8 = '.';
 const CHAR_GROUND: u8 = '#';
@@ -59,24 +59,11 @@ pub const LevelBluePrintMappingObjectTypes = enum(u8) {
 };
 
 pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
-    // const enemy_ai = Node{
-    //     .sequence = .{
-    //         .children = &[_]Node{
-    //             .{ .check_health = .{ .hp = 100.0 } },
-    //             .{ .move_to_enemy = .{} },
-    //         },
-    //     },
-    // };
-    // _ = enemy_ai.tick();
-
     return struct {
         const Self = @This();
         ///The Blueprints (Shared across all instances)
         ///
         ///Each . represents a row so each char(.,~,|,_,^,ETC) represends a cell in that row
-        ///
-        ///Each row needs to have 47 cells which is (levelWidth + tileSize - 1) / tileSize
-        ///Example: (1500 / 32 - 1) / 32
         const BLUEPRINTS = [totalLevels][19][]const u8{
             .{
                 "...............................................", // 0-9 empty
@@ -90,13 +77,13 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
                 "...............................................",
                 "...............................................",
                 "...............................................", // 10
-                ".....|..|.......................................",
-                ".....|..|.......................................", // 12
-                ".....|..|.......................................",
-                ".....|..|.......................................",
-                ".....|..|.......................................",
-                ".....|..|.............___.......................",
-                ".....|..|....E......E..........................",
+                "................................................",
+                "................................................", // 12
+                "................................................",
+                "................................................",
+                "................................................",
+                "__....................___.......................",
+                "...........E...................................",
                 "###############~~~~~###########################", // 18
             },
             .{
@@ -232,6 +219,8 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
         /// 5 => CHAR_HORRIZONTAL_PLATFORM
         ///
         /// 6 => CHAR_CHECK_POINT
+        ///
+        /// 7 => CHAR_ENEMY
         pub fn getTilesAt(self: *Self, playerX: f32, playerY: f32) u8 {
             // 1. Determine which level index this X coordinate belongs to
             // Example: 1600 / 1504 = 1.06 -> Index 1
@@ -246,8 +235,8 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
             const local_x = playerX - global_x_offset;
 
             // 4. Convert Local X and World Y to Grid Coordinates (0-46 and 0-18)
-            const col = @as(i32, @intFromFloat(local_x / TILE_SIZE_F32));
-            const row = @as(i32, @intFromFloat(playerY / TILE_SIZE_F32));
+            const col = @as(i32, @intFromFloat(local_x / TILE_SIZE_F));
+            const row = @as(i32, @intFromFloat(playerY / TILE_SIZE_F));
 
             // 5. Safety: Grid boundary check
             if (col < 0 or col >= COLUMNS_PER_LEVEL or row < 0 or row >= ROWS) return 0;
@@ -294,6 +283,7 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
                         false,
                         false,
                         false,
+                        true,
                         DamageComponent.init(
                             0,
                             false,
@@ -306,6 +296,7 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
                         false,
                         false,
                         false,
+                        true,
                         DamageComponent.init(
                             10.0,
                             true,
@@ -318,6 +309,7 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
                         false,
                         false,
                         false,
+                        false,
                         null,
                     )),
                     4 => try self.levelObjectProperties.put(key, ObjectProperties.init(
@@ -327,6 +319,7 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
                         false,
                         false,
                         false,
+                        true,
                         DamageComponent.init(
                             10.0,
                             true,
@@ -339,6 +332,7 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
                         false,
                         false,
                         false,
+                        true,
                         null,
                     )),
                     else => {},
@@ -352,9 +346,9 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
                 for (0..COLUMNS_PER_LEVEL) |col| {
                     const gridCharacterId = LevelBluePrintMappingObjectTypes.charToId(currentLevelBluePrint[row][col]);
                     if (gridCharacterId == 0) continue;
-                    const posX = (Utils.floatFromInt(f32, col) * TILE_SIZE_F32) + globalXOffset;
-                    const posY = Utils.floatFromInt(f32, row) * TILE_SIZE_F32;
-                    drawTiles(gridCharacterId, posX, posY, TILE_SIZE_F32);
+                    const posX = (Utils.floatFromInt(f32, col) * TILE_SIZE_F) + globalXOffset;
+                    const posY = Utils.floatFromInt(f32, row) * TILE_SIZE_F;
+                    drawTiles(gridCharacterId, posX, posY, TILE_SIZE_F);
                 }
             }
         }
@@ -406,10 +400,9 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
             index: usize,
         ) !void {
             if (gridCharacterLocation == CHAR_ENEMY) {
-                std.debug.print("INDEX: {d}\n", .{index});
                 const global_x_offset = @as(f32, @floatFromInt(levelIndex * LEVEL_WIDTH));
-                const spawn_x = (@as(f32, @floatFromInt(col)) * TILE_SIZE_F32) + global_x_offset;
-                const spawn_y = @as(f32, @floatFromInt(row)) * TILE_SIZE_F32;
+                const spawn_x = (@as(f32, @floatFromInt(col)) * TILE_SIZE_F) + global_x_offset;
+                const spawn_y = @as(f32, @floatFromInt(row)) * TILE_SIZE_F;
                 try self.enemies.append(self.allocator, try Enemy.init(
                     self.allocator,
                     index,
