@@ -15,9 +15,9 @@ const Widgets = @import("./widgets.zig").Widgets;
 const EnemyAI = @import("../common/Entity.zig").CreateEnemyAI;
 const TILE_SIZE_F = @import("../types.zig").TILE_SIZE_F;
 const TILE_SIZE = @import("../types.zig").TILE_SIZE;
-const EnemyAIType = @import("../common/AI.zig").EnemyAIType;
-const PlayerProps = @import("../common/AI.zig").PlayerProps;
-const CheckForCollisionsProps = @import("../common/AI.zig").CheckForCollisionsProps;
+const EnemyAIType = @import("../common/Entity.zig").EnemyAIType;
+const PlayerProps = @import("../common/Entity.zig").PlayerProps;
+const CheckForCollisionsProps = @import("../common/Entity.zig").CheckForCollisionsProps;
 const Enemy = @import("./enemies.zig").Enemy;
 
 pub const Config = struct {
