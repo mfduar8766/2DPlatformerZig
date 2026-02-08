@@ -58,6 +58,7 @@ pub const Game = struct {
     screenHeight: f32 = 0.0,
     screenWidth: f32 = 0.0,
     playerAI: PlayerType = undefined,
+    gameObjectPropertiesMap: std.AutoHashMap([]const u8, *const ObjectProperties) = undefined,
 
     pub fn init(allocator: std.mem.Allocator) !*Self {
         const gamePtr = try allocator.create(Self);
@@ -72,6 +73,7 @@ pub const Game = struct {
         self.world.deinit();
         self.enemyAI.deinit();
         self.player.deinit();
+        self.gameObjectPropertiesMap.deinit();
         self.allocator.destroy(self);
     }
     pub fn run(self: *Self) !void {
@@ -105,6 +107,7 @@ pub const Game = struct {
         self.world = try World(totalLevels, 0).init(self.allocator);
         self.enemyAI = try CreateEntity(self.allocator, *Enemy);
         self.playerAI = try CreateEntity(self.allocator, *Player);
+        self.gameObjectPropertiesMap = std.AutoHashMap([]const u8, *const ObjectProperties).init(self.allocator);
     }
     fn update(self: *Self, dt: f32) !void {
         self.player.handleMovement(dt, self.world.getRect());

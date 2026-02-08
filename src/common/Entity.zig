@@ -24,7 +24,7 @@ pub const PlayerPosition = struct {
 pub const UpdateProps = struct {
     const Self = @This();
     dt: f32,
-    player: ?*Player,
+    player: *Player,
     topLeftCeil: u8 = undefined,
     topRightCeil: u8 = undefined,
     bottomLeft: u8 = undefined,
@@ -96,7 +96,7 @@ fn Entity(comptime T: type) type {
                 .sequence => |*payload| payload.update(props, objectType),
                 .movement => |*payload| payload.update(props, objectType),
                 .collisions => |*payload| payload.update(props, objectType),
-                .damage => |payload| payload.update(props, objectType),
+                .damage => |*payload| payload.update(props, objectType),
                 .checkHealth => |*payload| payload.update(props, objectType),
             }
         }
@@ -267,12 +267,13 @@ fn Collisions(comptime T: type) type {
                 },
                 *Player => {
                     var player = @as(*Player, objectType);
+                    const rect = player.getRect();
                     const dt = props.dt;
-                    const pY = player.getPosition().y;
-                    const pRightEdge = player.getRightEdge();
-                    const pBottomEdge = player.getBottomEdge();
-                    const pLeftEdge = player.getLeftEdge();
-                    const pTopEdge = player.getTopEdge();
+                    const pY = rect.getPosition().y;
+                    const pRightEdge = rect.getRightEdge();
+                    const pBottomEdge = rect.getBottomEdge();
+                    const pLeftEdge = rect.getLeftEdge();
+                    const pTopEdge = rect.getTopEdge();
 
                     // 1. Get tile IDs at critical points
                     // const topLeft = self.world.getTilesAt(pX + margin, pY);
@@ -291,7 +292,7 @@ fn Collisions(comptime T: type) type {
                     const bottomRight = props.bottomRight;
                     const middleLeft = props.middleLeft;
                     const middleRight = props.middleRight;
-                    const velY = self.player.getVelocity(.Y);
+                    const velY = player.getVelocity(.Y);
 
                     // --- VERTICAL COLLISIONS (Falling) ---
                     if (velY >= 0.0) {
@@ -302,42 +303,39 @@ fn Collisions(comptime T: type) type {
                             if (pBottomEdge >= gridY) {
                                 self.handleCollisionss(
                                     player,
-                                    dt,
                                     .FALLING,
                                     gridY,
-                                    &self.getObjectProperties(1).?,
+                                    &self.getObjectProperties(props.levelObjectProperties, 1).?,
                                     .Y,
                                     null,
                                 );
                             }
                         } else if (bottomLeft == 2 or bottomRight == 2 or bottomLeft == 4 or bottomRight == 4) {
-                            self.player.startFalling(dt);
+                            player.startFalling(dt);
                             // WATER/SPIKES: Collision at the offset (+5px)
                             const waterSurfaceY = gridY + 5.0;
                             if (pBottomEdge >= waterSurfaceY) {
                                 const id = if (bottomLeft != 0) bottomLeft else bottomRight;
                                 self.handleCollisionss(
                                     player,
-                                    dt,
                                     .FALLING,
                                     waterSurfaceY,
-                                    &self.getObjectProperties(id).?,
+                                    &self.getObjectProperties(props.levelObjectProperties, id).?,
                                     .Y,
                                     null,
                                 );
                             } else {
                                 // IMPORTANT: We are inside the tile but haven't hit the water surface yet.
                                 // We must keep falling!
-                                self.player.setIsOnGround(false);
+                                player.setIsOnGround(false);
                             }
                         } else if (bottomLeft == 5 and bottomRight == 5) {
                             if (pBottomEdge >= gridY) {
                                 self.handleCollisionss(
                                     player,
-                                    dt,
                                     .FALLING,
                                     gridY,
-                                    &self.getObjectProperties(5).?,
+                                    &self.getObjectProperties(props.levelObjectProperties, 5).?,
                                     .Y,
                                     null,
                                 );
@@ -349,10 +347,9 @@ fn Collisions(comptime T: type) type {
                             if (pRightEdge >= leftEdgeOfGrid and pTopEdge >= bottomOfGridElement) {
                                 self.handleCollisionss(
                                     player,
-                                    dt,
                                     .HORRIZONTAL,
                                     leftEdgeOfGrid,
-                                    &self.getObjectProperties(middleRight).?,
+                                    &self.getObjectProperties(props.levelObjectProperties, middleRight).?,
                                     .X,
                                     .RIGHT,
                                 );
@@ -363,10 +360,10 @@ fn Collisions(comptime T: type) type {
                             const bottomOfGridElement = @floor(pTopEdge / TILE_SIZE_F) * TILE_SIZE_F;
                             if (pLeftEdge >= rightEdgeOfGrid and pTopEdge >= bottomOfGridElement) {
                                 self.handleCollisionss(
-                                    dt,
+                                    player,
                                     .HORRIZONTAL,
                                     rightEdgeOfGrid,
-                                    &self.getObjectProperties(middleLeft).?,
+                                    &self.getObjectProperties(props.levelObjectProperties, middleLeft).?,
                                     .X,
                                     .LEFT,
                                 );
@@ -384,10 +381,10 @@ fn Collisions(comptime T: type) type {
                             const topOfGridElement = @floor(pBottomEdge / TILE_SIZE_F) * TILE_SIZE_F;
                             if (pRightEdge >= leftEdgeOfGrid and pTopEdge <= topOfGridElement) {
                                 self.handleCollisionss(
-                                    dt,
+                                    player,
                                     .HORRIZONTAL,
                                     leftEdgeOfGrid,
-                                    &self.getObjectProperties(middleRight).?,
+                                    &self.getObjectProperties(props.levelObjectProperties, middleRight).?,
                                     .X,
                                     .RIGHT,
                                 );
@@ -399,10 +396,10 @@ fn Collisions(comptime T: type) type {
                             const topOfGridElement = @floor(pBottomEdge / TILE_SIZE_F) * TILE_SIZE_F;
                             if (pLeftEdge >= rightEdgeOfGrid and pTopEdge <= topOfGridElement) {
                                 self.handleCollisionss(
-                                    dt,
+                                    player,
                                     .HORRIZONTAL,
                                     rightEdgeOfGrid,
-                                    &self.getObjectProperties(middleLeft).?,
+                                    &self.getObjectProperties(props.levelObjectProperties, middleLeft).?,
                                     .X,
                                     .LEFT,
                                 );
@@ -412,10 +409,10 @@ fn Collisions(comptime T: type) type {
                             const id = if (topLeftCeil != 0) topLeftCeil else topRightCeil;
                             const ceilLine = @ceil(pY / TILE_SIZE_F) * TILE_SIZE_F;
                             self.handleCollisionss(
-                                dt,
+                                player,
                                 .HEAD_BUMP,
                                 ceilLine,
-                                &self.getObjectProperties(id).?,
+                                &self.getObjectProperties(props.levelObjectProperties, id).?,
                                 .Y,
                                 null,
                             );
