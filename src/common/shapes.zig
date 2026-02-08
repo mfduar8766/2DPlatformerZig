@@ -20,12 +20,12 @@ pub const Rectangle = struct {
         position: rayLib.Vector2,
         color: rayLib.Color,
     ) Self {
-        var self = Self{
+        const self = Self{
             .color = color,
             .objectType = objectType,
             .rect = rayLib.Rectangle.init(position.x, position.y, width, height),
         };
-        self.setDamageAmount();
+        // self.setDamageAmount();
         return self;
     }
     pub fn intersects(self: Self, other: Rectangle) bool {
@@ -164,53 +164,77 @@ pub const Rectangle = struct {
     pub fn collidedWithTop(self: Self, rect: *Rectangle) bool {
         return self.getBottomEdge() >= rect.getTopEdge();
     }
-    fn setDamageAmount(self: *Self) void {
-        switch (self.objectType) {
-            // Use the capture syntax |value| to get the data inside
-            .PLATFORM => |plat_type| {
-                switch (plat_type) {
-                    .GROUND => {
-                        // self.damage = DamageHandler.init(true, 10.0, false);
-                    },
-                    .ICE => {
-                        //self.damage = DamageHandler.init(true, 10.0, true)
-                    },
-                    .VERTICAL => {},
-                    .SLIPPERY => {},
-                    .WATER => {
-                        // self.damage = DamageHandler.init(true, 10.0, true);
-                        // self.effects = ObjectEffects.init(true, 10.0, false, false, false);
-                    },
-                    .GRASS => {},
-                    .WALL => {
-                        //self.effects = ObjectEffects.init(true, 10.0, false, false, false)
-                    },
-                }
-            },
-            .ENEMY => |enemy_type| {
-                switch (enemy_type) {
-                    .LOW => {
-                        self.objectProperties = ObjectProperties.init(
-                            .ENEMY,
-                            true,
-                            50.0,
-                            false,
-                            false,
-                            false,
-                            true,
-                            DamageComponent.init(
-                                10.0,
-                                false,
-                            ),
-                        );
-                    },
-                    .MED => {},
-                    .HIGH => {},
-                    .BOSS => {},
-                    .PATROL => {},
-                }
-            },
-            else => |_| {},
-        }
+    // fn setDamageAmount(self: *Self) void {
+    //     switch (self.objectType) {
+    //         // Use the capture syntax |value| to get the data inside
+    //         .PLATFORM => |plat_type| {
+    //             switch (plat_type) {
+    //                 .GROUND => {
+    //                     // self.damage = DamageHandler.init(true, 10.0, false);
+    //                 },
+    //                 .ICE => {
+    //                     //self.damage = DamageHandler.init(true, 10.0, true)
+    //                 },
+    //                 .VERTICAL => {},
+    //                 .SLIPPERY => {},
+    //                 .WATER => {
+    //                     // self.damage = DamageHandler.init(true, 10.0, true);
+    //                     // self.effects = ObjectEffects.init(true, 10.0, false, false, false);
+    //                 },
+    //                 .GRASS => {},
+    //                 .WALL => {
+    //                     //self.effects = ObjectEffects.init(true, 10.0, false, false, false)
+    //                 },
+    //             }
+    //         },
+    //         .ENEMY => |enemy_type| {
+    //             switch (enemy_type) {
+    //                 .LOW => {
+    //                     self.objectProperties = ObjectProperties.init(
+    //                         .ENEMY,
+    //                         true,
+    //                         50.0,
+    //                         false,
+    //                         false,
+    //                         false,
+    //                         true,
+    //                         DamageComponent.init(
+    //                             10.0,
+    //                             false,
+    //                         ),
+    //                     );
+    //                 },
+    //                 .MED => {},
+    //                 .HIGH => {},
+    //                 .BOSS => {},
+    //                 .PATROL => {},
+    //             }
+    //         },
+    //         .PROJECTILES => |projectileType| {
+    //             switch (projectileType) {
+    //                 .BULLETS => {},
+    //                 .ARROWS => {},
+    //                 .MAGIC => {},
+    //             }
+    //         },
+    //         else => |_| {},
+    //     }
+    // }
+};
+
+pub const Circel = struct {
+    const Self = @This();
+    objectType: GAME_OBJECT_TYPES,
+    center: rayLib.Vector2,
+    radius: f32,
+    color: rayLib.Color,
+
+    pub fn init(objectType: GAME_OBJECT_TYPES, center: rayLib.Vector2, radius: f32, color: rayLib.Color) Self {
+        return Self{
+            .objectType = objectType,
+            .center = center,
+            .radius = radius,
+            .color = color,
+        };
     }
 };

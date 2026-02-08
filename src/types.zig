@@ -59,11 +59,15 @@ pub const FileExtensions = enum(u8) {
     }
 };
 
-pub const DIRECTION = enum(u8) {
-    LEFT = 0,
-    RIGHT = 1,
-    UP = 2,
-    DOWN = 3,
+pub const GAME_OBJECT_TYPES = union(enum) {
+    PLAYER: u2, // Player uses a simple integer type
+    PLATFORM: PLATFORM_TYPES, // Platform can hold values from PLATFORM_TYPES
+    ENEMY: ENEMY_TYPES, // Enemy can hold values from ENEMY_TYPE
+    UI: UI_TYPES,
+    WORLD: u2,
+    WEAPONS: WEAPON_TYPES,
+    PROJECTILES: PROJECTILE_TYPES,
+    LEVELS: LevelBluePrintMappingObjectTypes,
 };
 
 pub const PLATFORM_TYPES = enum(u8) {
@@ -91,18 +95,21 @@ pub const UI_TYPES = enum(u2) {
     INVENTORY = 3,
 };
 
-pub const GAME_OBJECT_TYPES = union(enum) {
-    PLAYER: u2, // Player uses a simple integer type
-    PLATFORM: PLATFORM_TYPES, // Platform can hold values from PLATFORM_TYPES
-    ENEMY: ENEMY_TYPES, // Enemy can hold values from ENEMY_TYPE
-    UI: UI_TYPES,
-    WORLD: u2,
+pub const WEAPON_TYPES = enum(u2) {
+    SWORD = 0,
 };
 
 pub const PLAYER_STATE = enum(u8) {
     FRENZY = 0,
     DEAD = 1,
     ALIVE = 2,
+};
+
+pub const DIRECTION = enum(u8) {
+    LEFT = 0,
+    RIGHT = 1,
+    UP = 2,
+    DOWN = 3,
 };
 
 pub const VELOCITY = enum(u2) {
@@ -123,6 +130,7 @@ pub const COLLISION_TYPES = enum(u8) {
     HORRIZONTAL = 5,
     ENEMY_BODY = 6,
     PROJECTILE = 7,
+    WEAPON = 8,
 };
 
 pub const ENEMEY_STATE = enum(u8) {
@@ -132,4 +140,58 @@ pub const ENEMEY_STATE = enum(u8) {
     ATTACK = 4,
     DEAD = 5,
     COOL_DOWN = 6,
+};
+
+pub const CHAR_EMPTY_SPACE: u8 = '.';
+pub const CHAR_GROUND: u8 = '#';
+pub const CHAR_WATER: u8 = '~';
+pub const CHAR_WALL: u8 = '|';
+pub const CHAR_SPILES: u8 = '^';
+pub const CHAR_HORRIZONTAL_PLATFORM: u8 = '_';
+pub const CHAR_CHECK_POINT: u8 = 'C';
+pub const CHAR_ENEMY: u8 = 'E';
+pub const WATER_HEIGHT = 5.0;
+pub const SPIKE_HEIGHT = 5.0;
+pub const LevelBluePrintMappingObjectTypes = enum(u8) {
+    EMPTY_SPACE,
+    GROUND,
+    WATER,
+    WALL,
+    SPIKES,
+    HORRIZONTAL_PLATFORMS,
+    CHECK_POINT,
+    ENEMY,
+
+    pub fn charToId(char: u8) u8 {
+        return switch (char) {
+            CHAR_EMPTY_SPACE => 0,
+            CHAR_GROUND => 1,
+            CHAR_WATER => 2,
+            CHAR_WALL => 3,
+            CHAR_SPILES => 4,
+            CHAR_HORRIZONTAL_PLATFORM => 5,
+            CHAR_CHECK_POINT => 6,
+            CHAR_ENEMY => 7,
+            else => 0,
+        };
+    }
+    pub fn idToChar(id: usize) u8 {
+        return switch (id) {
+            0 => CHAR_EMPTY_SPACE,
+            1 => CHAR_GROUND,
+            2 => CHAR_WATER,
+            3 => CHAR_WALL,
+            4 => CHAR_SPILES,
+            5 => CHAR_HORRIZONTAL_PLATFORM,
+            6 => CHAR_CHECK_POINT,
+            7 => CHAR_ENEMY,
+            else => CHAR_EMPTY_SPACE,
+        };
+    }
+};
+
+pub const PROJECTILE_TYPES = enum(u2) {
+    BULLETS = 0,
+    ARROWS = 1,
+    MAGIC = 3,
 };

@@ -841,10 +841,16 @@ pub fn writeAllToFile(file: fs.File, data: []const u8) !void {
     try writer.flush();
 }
 
+///Converts an integer to the closest floating point representation. The return type is the inferred result type.
+///
+///  To convert the other way, use @intFromFloat. This operation is legal for all values of all integer types.
 pub fn floatFromInt(comptime T: type, int: anytype) T {
     return @as(T, @floatFromInt(int));
 }
 
+///Converts the integer part of a floating point number to the inferred result type.
+///
+///If the integer part of the floating point number cannot fit in the destination type, it invokes safety-checked Illegal Behavior.
 pub fn intFromFloat(comptime T: type, int: anytype) T {
     return @as(T, @intFromFloat(int));
 }
@@ -899,4 +905,22 @@ pub fn Timer() type {
             self.endTime = 1.0;
         }
     };
+}
+
+pub fn safeIntCast(comptime T: type, int: anytype) T {
+    const InType = @TypeOf(int);
+
+    // This check happens at COMPILE TIME
+    if (T == usize and InType == isize) {
+        // Handle negative to unsigned conversion safely
+        return @intCast(@max(0, int));
+    } else if (T == isize and InType == usize) {
+        // Handle overflow for usize -> isize
+        const max_isize = std.math.maxInt(isize);
+        if (int > max_isize) return max_isize;
+        return @intCast(int);
+    } else {
+        // Standard cast for everything else
+        return @intCast(int);
+    }
 }

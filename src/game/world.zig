@@ -9,54 +9,17 @@ const ObjectProperties = @import("../common//objectProperties.zig").ObjectProper
 const DamageComponent = @import("../common/objectProperties.zig").DamageComponent;
 const TILE_SIZE = @import("../types.zig").TILE_SIZE;
 const TILE_SIZE_F = @import("../types.zig").TILE_SIZE_F;
-
-const CHAR_EMPTY_SPACE: u8 = '.';
-const CHAR_GROUND: u8 = '#';
-const CHAR_WATER: u8 = '~';
-const CHAR_WALL: u8 = '|';
-const CHAR_SPILES: u8 = '^';
-const CHAR_HORRIZONTAL_PLATFORM: u8 = '_';
-const CHAR_CHECK_POINT: u8 = 'C';
-const CHAR_ENEMY: u8 = 'E';
+const CHAR_EMPTY_SPACE = @import("../types.zig").CHAR_EMPTY_SPACE;
+const CHAR_GROUND = @import("../types.zig").CHAR_GROUND;
+const CHAR_WATER = @import("../types.zig").CHAR_WATER;
+const CHAR_WALL = @import("../types.zig").CHAR_WALL;
+const CHAR_SPILES = @import("../types.zig").CHAR_SPILES;
+const CHAR_HORRIZONTAL_PLATFORM = @import("../types.zig").CHAR_HORRIZONTAL_PLATFORM;
+const CHAR_CHECK_POINT = @import("../types.zig").CHAR_CHECK_POINT;
+const CHAR_ENEMY = @import("../types.zig").CHAR_ENEMY;
 const WATER_HEIGHT = 5.0;
 const SPIKE_HEIGHT = 5.0;
-pub const LevelBluePrintMappingObjectTypes = enum(u8) {
-    EMPTY_SPACE,
-    GROUND,
-    WATER,
-    WALL,
-    SPIKES,
-    HORRIZONTAL_PLATFORMS,
-    CHECK_POINT,
-    ENEMY,
-
-    pub fn charToId(char: u8) u8 {
-        return switch (char) {
-            CHAR_EMPTY_SPACE => 0,
-            CHAR_GROUND => 1,
-            CHAR_WATER => 2,
-            CHAR_WALL => 3,
-            CHAR_SPILES => 4,
-            CHAR_HORRIZONTAL_PLATFORM => 5,
-            CHAR_CHECK_POINT => 6,
-            CHAR_ENEMY => 7,
-            else => 0,
-        };
-    }
-    pub fn idToChar(id: usize) u8 {
-        return switch (id) {
-            0 => CHAR_EMPTY_SPACE,
-            1 => CHAR_GROUND,
-            2 => CHAR_WATER,
-            3 => CHAR_WALL,
-            4 => CHAR_SPILES,
-            5 => CHAR_HORRIZONTAL_PLATFORM,
-            6 => CHAR_CHECK_POINT,
-            7 => CHAR_ENEMY,
-            else => CHAR_EMPTY_SPACE,
-        };
-    }
-};
+pub const LevelBluePrintMappingObjectTypes = @import("../types.zig").LevelBluePrintMappingObjectTypes;
 
 pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
     return struct {
@@ -122,6 +85,7 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
         enemies: std.ArrayList(*Enemy),
         dynamicPlatforms: std.ArrayList(Rectangle),
         levelObjectProperties: std.AutoHashMap(u8, ObjectProperties) = undefined,
+        // player: PlayerType = undefined,
 
         pub fn init(allocator: std.mem.Allocator) !*Self {
             // try foo(allocator);
@@ -138,6 +102,7 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
                     rayLib.Color.init(0, 0, 0, 0),
                 ),
                 .levelObjectProperties = std.AutoHashMap(u8, ObjectProperties).init(allocator),
+                // .player = try CreateEntity(allocator, *Player, try Player.init(allocator, config)), //Player.init(allocator, config),
             };
             try self.setLevelObjectProperties();
             try self.loadLevel(currentLevel);
@@ -151,10 +116,11 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
             }
             self.enemies.deinit(self.allocator);
             self.levelObjectProperties.deinit();
+            // self.player.deinit();
             self.allocator.destroy(self);
         }
-        pub fn getRect(self: *Self) Rectangle {
-            return self.rect;
+        pub fn getRect(self: *Self) *Rectangle {
+            return &self.rect;
         }
         pub fn getLevelIndex(self: *Self) usize {
             return self.currentLevelIndex;
@@ -266,6 +232,12 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
             }
             return null;
         }
+        // pub fn checkForCollisions(self: *Self, dt: f32) void {
+        //     self.player.checkForCollisions(dt, self.createCheckForCollisionPorps(self.player.getRect()));
+        // }
+        // pub fn handleMovement(self: *Self, dt: f32) void {
+        //     self.player.handleMovement(dt, self.getRect());
+        // }
         fn setLevelObjectProperties(self: *Self) !void {
             const levelTileTypes = [5]u8{
                 LevelBluePrintMappingObjectTypes.charToId(CHAR_GROUND),
@@ -277,7 +249,7 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
             for (levelTileTypes) |key| {
                 switch (key) {
                     1 => try self.levelObjectProperties.put(key, ObjectProperties.init(
-                        LevelBluePrintMappingObjectTypes.GROUND,
+                        .{ .LEVELS = .GROUND },
                         false,
                         0,
                         false,
@@ -290,7 +262,7 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
                         ),
                     )),
                     2 => try self.levelObjectProperties.put(key, ObjectProperties.init(
-                        LevelBluePrintMappingObjectTypes.WATER,
+                        .{ .LEVELS = .WATER },
                         true,
                         100.0,
                         false,
@@ -303,7 +275,7 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
                         ),
                     )),
                     3 => try self.levelObjectProperties.put(key, ObjectProperties.init(
-                        LevelBluePrintMappingObjectTypes.WALL,
+                        .{ .LEVELS = .WALL },
                         false,
                         0,
                         false,
@@ -313,7 +285,7 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
                         null,
                     )),
                     4 => try self.levelObjectProperties.put(key, ObjectProperties.init(
-                        LevelBluePrintMappingObjectTypes.SPIKES,
+                        .{ .LEVELS = .SPIKES },
                         true,
                         100.0,
                         false,
@@ -326,7 +298,7 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
                         ),
                     )),
                     5 => try self.levelObjectProperties.put(key, ObjectProperties.init(
-                        LevelBluePrintMappingObjectTypes.HORRIZONTAL_PLATFORMS,
+                        .{ .LEVELS = .HORRIZONTAL_PLATFORMS },
                         false,
                         0,
                         false,
@@ -400,9 +372,9 @@ pub fn World(comptime totalLevels: usize, currentLevel: usize) type {
             index: usize,
         ) !void {
             if (gridCharacterLocation == CHAR_ENEMY) {
-                const global_x_offset = @as(f32, @floatFromInt(levelIndex * LEVEL_WIDTH));
-                const spawn_x = (@as(f32, @floatFromInt(col)) * TILE_SIZE_F) + global_x_offset;
-                const spawn_y = @as(f32, @floatFromInt(row)) * TILE_SIZE_F;
+                const global_x_offset = Utils.floatFromInt(f32, levelIndex * LEVEL_WIDTH); //@as(f32, @floatFromInt(levelIndex * LEVEL_WIDTH));
+                const spawn_x = (Utils.floatFromInt(f32, col) * TILE_SIZE_F) + global_x_offset; //(@as(f32, @floatFromInt(col)) * TILE_SIZE_F) + global_x_offset;
+                const spawn_y = Utils.floatFromInt(f32, row) * TILE_SIZE_F; //@as(f32, @floatFromInt(row)) * TILE_SIZE_F;
                 try self.enemies.append(self.allocator, try Enemy.init(
                     self.allocator,
                     index,

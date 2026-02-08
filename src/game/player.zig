@@ -61,15 +61,17 @@ pub const Player = struct {
     pub fn getRect(self: *Self) *Rectangle {
         return &self.rect;
     }
-    pub fn handleMovement(self: *Self, dt: f32, worldBounds: Rectangle) void {
+    pub fn handleMovement(self: *Self, dt: f32, worldBounds: *Rectangle) void {
         if (self.velocityX > 0 and (!rayLib.isKeyDown(.d) or !rayLib.isKeyDown(.a))) {
             self.velocityX = 0.0;
         }
         if (rayLib.isKeyDown(.d)) {
+            //MOVE RIGHT
             self.velocityX = self.spped;
             self.rect.addPosition(.X, self.velocityX * self.speedMultiplier * dt);
             self.checkBounds(DIRECTION.RIGHT, worldBounds);
         } else if (rayLib.isKeyDown(.a)) {
+            //MOVE LEFT
             self.velocityX = -self.spped;
             self.rect.addPosition(.X, self.velocityX * self.speedMultiplier * dt);
             self.checkBounds(DIRECTION.LEFT, worldBounds);
@@ -151,7 +153,15 @@ pub const Player = struct {
         if (properties.bounce) {
             if (position == .X) {
                 const left = if (direction) |dir| dir == .LEFT else false;
-                if (left) {} else {
+                if (left) {
+                    self.velocityX = if (Utils.isNegativeNumber(properties.bounceAmount)) properties.bounceAmount else Utils.convertSigns(
+                        .NEGATIVE,
+                        properties.bounceAmount,
+                    );
+                    self.velocityX += self.spped * dt;
+                    self.rect.addPosition(.X, self.velocityX);
+                    self.velocityX = 0.0;
+                } else {
                     self.velocityX = if (Utils.isNegativeNumber(properties.bounceAmount)) properties.bounceAmount else Utils.convertSigns(
                         .POSITIVE,
                         properties.bounceAmount,
@@ -201,7 +211,7 @@ pub const Player = struct {
     //         },
     //     }
     // }
-    fn checkBounds(self: *Self, move: DIRECTION, worldBounds: Rectangle) void {
+    fn checkBounds(self: *Self, move: DIRECTION, worldBounds: *Rectangle) void {
         switch (move) {
             DIRECTION.LEFT => {
                 // Stop at the absolute beginning of Level 0

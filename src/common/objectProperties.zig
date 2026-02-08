@@ -1,8 +1,8 @@
-const LevelBluePrintMappingObjectTypes = @import("../game/world.zig").LevelBluePrintMappingObjectTypes;
+const GAME_OJECT_TYPE = @import("../types.zig").GAME_OBJECT_TYPES;
 
 pub const ObjectProperties = struct {
     const Self = @This();
-    objectType: LevelBluePrintMappingObjectTypes,
+    objectType: GAME_OJECT_TYPE,
     bounce: bool = false,
     bounceAmount: f32 = 0.0,
     freeze: bool = false,
@@ -12,7 +12,7 @@ pub const ObjectProperties = struct {
     damage: ?DamageComponent = null,
 
     pub fn init(
-        objectType: LevelBluePrintMappingObjectTypes,
+        objectType: GAME_OJECT_TYPE,
         bounce: bool,
         bounceAmount: f32,
         freeze: bool,
@@ -31,6 +31,66 @@ pub const ObjectProperties = struct {
             .isSolid = isSolid,
             .damage = damage,
         };
+    }
+    //TODO: Have a map that holds all the objectProperties and their damage ETC
+    fn setDamageAmount(self: *Self) void {
+        switch (self.objectType) {
+            // Use the capture syntax |value| to get the data inside
+            .PLATFORM => |plat_type| {
+                switch (plat_type) {
+                    .GROUND => {
+                        // self.damage = DamageHandler.init(true, 10.0, false);
+                    },
+                    .ICE => {
+                        //self.damage = DamageHandler.init(true, 10.0, true)
+                    },
+                    .VERTICAL => {},
+                    .SLIPPERY => {},
+                    .WATER => {
+                        // self.damage = DamageHandler.init(true, 10.0, true);
+                        // self.effects = ObjectEffects.init(true, 10.0, false, false, false);
+                    },
+                    .GRASS => {},
+                    .WALL => {
+                        //self.effects = ObjectEffects.init(true, 10.0, false, false, false)
+                    },
+                }
+            },
+            .ENEMY => |enemy_type| {
+                switch (enemy_type) {
+                    .LOW => {
+                        self.damage = DamageComponent.init(10.0, false);
+                        self.bounce = true;
+                        self.bounceAmount = 10.0;
+                        // self.objectProperties = ObjectProperties.init(
+                        //     .ENEMY,
+                        //     true,
+                        //     50.0,
+                        //     false,
+                        //     false,
+                        //     false,
+                        //     true,
+                        //     DamageComponent.init(
+                        //         10.0,
+                        //         false,
+                        //     ),
+                        // );
+                    },
+                    .MED => {},
+                    .HIGH => {},
+                    .BOSS => {},
+                    .PATROL => {},
+                }
+            },
+            .PROJECTILES => |projectileType| {
+                switch (projectileType) {
+                    .BULLETS => {},
+                    .ARROWS => {},
+                    .MAGIC => {},
+                }
+            },
+            else => |_| {},
+        }
     }
 };
 
